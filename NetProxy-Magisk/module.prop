@@ -1,7 +1,0 @@
-id=netproxy
-name=NetProxy
-version=v1.0.2
-versionCode=3
-author=Fanju
-description=基于Xray内核的代理工具
-updateJson=https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/update.json
