@@ -1,0 +1,17 @@
+{
+  "name": "netproxy-webui",
+  "private": true,
+  "version": "1.0.0",
+  "source": "src/index.html",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "dependencies": {
+    "mdui": "^2.0.0",
+    "kernelsu": "^0.0.7"
+  },
+  "devDependencies": {
+    "parcel": "^2.14.0"
+  }
+}

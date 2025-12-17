@@ -1,0 +1,965 @@
+:root {
+  --md-sys-color-primary: rgb(103, 80, 164);
+  --md-sys-color-on-primary: rgb(255, 255, 255);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--mdui-color-surface);
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+mdui-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+mdui-top-app-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  /* Android status bar with extra spacing */
+  padding-top: 40px;
+  min-height: calc(56px + 40px);
+}
+
+mdui-layout-main {
+  flex: 1;
+  overflow-y: auto;
+  /* Account for top bar (56px + 40px status bar) and bottom nav (80px) */
+  padding-top: 96px;
+  padding-bottom: 80px;
+}
+
+mdui-navigation-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.page {
+  display: none;
+  min-height: 100%;
+}
+
+.page.active {
+  display: block;
+}
+
+mdui-card {
+  margin-bottom: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ==================== Redesigned Status Card ==================== */
+
+.status-card-new {
+  padding: 16px !important;
+}
+
+/* Main Status Display */
+.status-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mdui-color-outline-variant);
+}
+
+.status-left {
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--mdui-color-surface-container);
+  border-radius: 20px;
+  margin-bottom: 6px;
+}
+
+.status-badge-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--mdui-color-outline);
+}
+
+.status-badge-dot.running {
+  background: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  animation: pulse-status 2s ease infinite;
+}
+
+.status-badge-dot.stopped {
+  background: #F44336;
+}
+
+@keyframes pulse-status {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.status-badge span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mdui-color-on-surface);
+}
+
+.status-detail {
+  font-size: 12px;
+  color: var(--mdui-color-on-surface-variant);
+  margin-left: 12px;
+}
+
+#status-chip-new {
+  font-size: 12px;
+  height: 26px;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-icon {
+  font-size: 20px;
+  color: var(--mdui-color-primary);
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-label {
+  font-size: 11px;
+  color: var(--mdui-color-on-surface-variant);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mdui-color-on-surface);
+}
+
+.info-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--mdui-color-outline-variant);
+}
+
+/* Responsive for new status card */
+@media (max-width: 600px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+  }
+
+  .info-divider {
+    display: none;
+  }
+}
+
+/* ==================== End Redesigned Status Card ==================== */
+
+/* Debug Log Styles */
+.debug-log-container {
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--mdui-color-surface-container);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.debug-log-item {
+  padding: 6px 8px;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  border-left: 3px solid;
+  background: var(--mdui-color-surface);
+}
+
+.debug-log-item.log {
+  border-left-color: #2196F3;
+}
+
+.debug-log-item.warn {
+  border-left-color: #FF9800;
+  background: rgba(255, 152, 0, 0.1);
+}
+
+.debug-log-item.error {
+  border-left-color: #F44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.debug-log-time {
+  color: var(--mdui-color-on-surface-variant);
+  font-size: 10px;
+  margin-right: 8px;
+}
+
+.debug-log-message {
+  color: var(--mdui-color-on-surface);
+}
+
+/* ==================== Compact Status Page Styles ==================== */
+
+/* Compact Card Base */
+.compact-card {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+}
+
+/* Compact Header */
+.compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-compact-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--mdui-color-on-surface);
+}
+
+/* Status and Speed Row */
+.status-speed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-info {
+  flex: 1;
+}
+
+/* Status Indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--mdui-color-outline);
+  transition: all 0.3s ease;
+}
+
+.status-dot.running {
+  background: #4CAF50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.2);
+  animation: pulse-dot 2s ease infinite;
+}
+
+.status-dot.stopped {
+  background: #F44336;
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.status-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--mdui-color-on-surface);
+}
+
+.status-time {
+  font-size: 12px;
+  color: var(--mdui-color-on-surface-variant);
+}
+
+#status-chip-compact {
+  font-size: 12px;
+  height: 24px;
+}
+
+/* Mini Speed Display (integrated in status card) */
+.speed-mini {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.speed-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  background: var(--mdui-color-surface-container);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--mdui-color-on-surface);
+}
+
+.speed-mini-unit {
+  font-size: 11px;
+  color: var(--mdui-color-on-surface-variant);
+  font-weight: 500;
+}
+
+/* Horizontal Latency Row */
+.latency-row {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.latency-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px;
+  background: var(--mdui-color-surface-container);
+  border-radius: 8px;
+  gap: 4px;
+}
+
+.latency-label {
+  font-size: 12px;
+  color: var(--mdui-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.latency-value-horizontal {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--mdui-color-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Latency Color Coding */
+.latency-value-horizontal.excellent {
+  color: #2E7D32;
+}
+
+.latency-value-horizontal.good {
+  color: #F57C00;
+}
+
+.latency-value-horizontal.poor {
+  color: #C62828;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .status-speed-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .speed-mini {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .latency-row {
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .status-card:hover,
+  .speed-card:hover,
+  .latency-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Service Status Card - Hero Section */
+  .status-hero {
+    text-align: center;
+    padding: 20px 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--mdui-color-primary-container) 0%, var(--mdui-color-surface-container-high) 100%);
+    margin-bottom: 12px;
+  }
+
+  .status-icon-container {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 12px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mdui-color-surface);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+  }
+
+  .status-icon-container.running {
+    background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+    animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  }
+
+  .status-icon-container.stopped {
+    background: linear-gradient(135deg, #F44336 0%, #EF5350 100%);
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    }
+
+    50% {
+      box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+    }
+  }
+
+  .status-icon {
+    width: 36px;
+    height: 36px;
+    fill: white;
+  }
+
+  .status-title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--mdui-color-on-surface);
+    letter-spacing: -0.5px;
+  }
+
+  .status-subtitle {
+    font-size: 14px;
+    margin: 0;
+    color: var(--mdui-color-on-surface-variant);
+    opacity: 0.8;
+  }
+
+  .status-details {
+    margin-top: 8px;
+  }
+
+  /* Network Speed Card */
+  .card-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: var(--mdui-color-on-surface);
+  }
+
+  .speed-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+  }
+
+  .speed-item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--mdui-color-surface-container);
+    transition: all 0.3s ease;
+  }
+
+  .speed-item:hover {
+    background: var(--mdui-color-surface-container-high);
+    transform: scale(1.02);
+  }
+
+  .speed-download {
+    border-left: 3px solid #4CAF50;
+  }
+
+  .speed-upload {
+    border-left: 3px solid #2196F3;
+  }
+
+  .speed-icon {
+    font-size: 28px;
+    font-weight: bold;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--mdui-color-surface-container-highest);
+  }
+
+  .speed-download .speed-icon {
+    color: #4CAF50;
+  }
+
+  .speed-upload .speed-icon {
+    color: #2196F3;
+  }
+
+  .speed-info {
+    flex: 1;
+  }
+
+  .speed-label {
+    font-size: 12px;
+    color: var(--mdui-color-on-surface-variant);
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+
+  .speed-value-container {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .speed-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--mdui-color-on-surface);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    animation: number-fade 0.3s ease;
+  }
+
+  @keyframes number-fade {
+    0% {
+      opacity: 0.5;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .speed-unit {
+    font-size: 14px;
+    color: var(--mdui-color-on-surface-variant);
+    font-weight: 500;
+  }
+
+  .speed-divider {
+    width: 1px;
+    height: 60px;
+    background: var(--mdui-color-outline-variant);
+  }
+
+  /* Latency Detection Card */
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .latency-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .latency-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    border-radius: 10px;
+    background: var(--mdui-color-surface-container);
+    transition: all 0.2s ease;
+  }
+
+  .latency-item:hover {
+    background: var(--mdui-color-surface-container-high);
+  }
+
+  .latency-info {
+    flex: 1;
+  }
+
+  .latency-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--mdui-color-on-surface);
+    margin-bottom: 2px;
+  }
+
+  .latency-host {
+    font-size: 11px;
+    color: var(--mdui-color-on-surface-variant);
+    font-family: 'Courier New', monospace;
+  }
+
+  .latency-badge {
+    min-width: 70px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.3s ease;
+  }
+
+  /* Latency Color Coding */
+  .latency-badge.excellent {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2E7D32;
+  }
+
+  .latency-badge.good {
+    background: rgba(255, 193, 7, 0.15);
+    color: #F57C00;
+  }
+
+  .latency-badge.poor {
+    background: rgba(244, 67, 54, 0.15);
+    color: #C62828;
+  }
+
+  .latency-badge.unknown {
+    background: var(--mdui-color-surface-container-highest);
+    color: var(--mdui-color-on-surface-variant);
+  }
+
+  .latency-value {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 600px) {
+    .speed-container {
+      flex-direction: column;
+    }
+
+    .speed-divider {
+      width: 100%;
+      height: 1px;
+    }
+
+    .status-hero {
+      padding: 24px 16px;
+    }
+
+    .status-icon-container {
+      width: 64px;
+      height: 64px;
+    }
+
+    .status-title {
+      font-size: 28px;
+    }
+
+    .speed-value {
+      font-size: 28px;
+    }
+  }
+
+  /* ==================== End MD3 Styles ==================== */
+
+
+  .log-container {
+    background-color: var(--mdui-color-surface-container);
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .log-container:empty::before {
+    content: '暂无日志';
+    color: var(--mdui-color-on-surface-variant);
+  }
+
+  mdui-card {
+    margin-bottom: 16px;
+  }
+
+  mdui-list-item[clickable] {
+    cursor: pointer;
+  }
+
+  mdui-list-item[clickable]:hover {
+    background-color: var(--mdui-color-surface-variant);
+  }
+
+  #status-chip {
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  #status-chip[data-status="running"] {
+    --mdui-comp-chip-container-color: rgb(76, 175, 80);
+    color: white;
+  }
+
+  #status-chip[data-status="stopped"] {
+    --mdui-comp-chip-container-color: rgb(244, 67, 54);
+    color: white;
+  }
+
+  .app-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .app-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  /* Smooth transitions */
+  .page {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Scrollbar styling for logs */
+  .log-container::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .log-container::-webkit-scrollbar-track {
+    background: var(--mdui-color-surface);
+    border-radius: 4px;
+  }
+
+  .log-container::-webkit-scrollbar-thumb {
+    background: var(--mdui-color-outline);
+    border-radius: 4px;
+  }
+
+  .log-container::-webkit-scrollbar-thumb:hover {
+    background: var(--mdui-color-on-surface-variant);
+  }
+
+  /* Skeleton Loading Animation */
+  .skeleton {
+    background: linear-gradient(90deg,
+        var(--mdui-color-surface-container) 25%,
+        var(--mdui-color-surface-container-high) 50%,
+        var(--mdui-color-surface-container) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: 4px;
+  }
+
+  .skeleton-circle {
+    border-radius: 50%;
+  }
+
+  .skeleton-text {
+    height: 14px;
+    margin: 4px 0;
+  }
+
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  /* JSON Syntax Highlighting */
+  .json-editor {
+    font-family: 'Courier New', monospace;
+    line-height: 1.5;
+  }
+
+  .json-key {
+    color: #0d47a1;
+  }
+
+  .json-string {
+    color: #2e7d32;
+  }
+
+  .json-number {
+    color: #e65100;
+  }
+
+  .json-boolean {
+    color: #6a1b9a;
+  }
+
+  .json-null {
+    color: #757575;
+  }
+
+  /* App Item Styles */
+  .app-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .app-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--mdui-color-surface-container);
+  }
+
+  .app-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .app-name {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-package {
+    font-size: 12px;
+    color: var(--mdui-color-on-surface-variant);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Pull to Refresh Indicator */
+  .pull-indicator {
+    position: fixed;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .pull-indicator.active {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* Error Shake Animation */
+  @keyframes shake {
+
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-5px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(5px);
+    }
+  }
+
+  .error-shake {
+    animation: shake 0.5s;
+  }
+
+/* FAB loading animation */
+.rotating {
+  animation: rotate 1s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

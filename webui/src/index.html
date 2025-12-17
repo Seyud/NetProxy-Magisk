@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 禁用缓存 -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="app-version" content="v1.0.1-20251210-1714">
+  <title>NetProxy</title>
+  <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <mdui-layout>
+    <!-- Top App Bar -->
+    <mdui-top-app-bar>
+      <div style="width: 24px"></div>
+      <mdui-top-app-bar-title>NetProxy</mdui-top-app-bar-title>
+      <div style="flex-grow: 1"></div>
+      <mdui-button-icon icon="brightness_6" id="theme-toggle"></mdui-button-icon>
+    </mdui-top-app-bar>
+
+    <!-- Main Content -->
+    <mdui-layout-main id="main-content">
+      <!-- Status Page -->
+      <div id="status-page" class="page active">
+        <div class="container">
+          <!-- Service Status Card (redesigned) -->
+          <mdui-card variant="elevated" class="compact-card status-card-new">
+            <!-- Main Status Display -->
+            <div class="status-main">
+              <div class="status-left">
+                <div class="status-badge" id="status-badge">
+                  <div class="status-badge-dot" id="status-badge-dot"></div>
+                  <span id="status-badge-text">检测中</span>
+                </div>
+                <div class="status-detail" id="status-detail">运行时间 --</div>
+              </div>
+              <mdui-chip id="status-chip-new">--</mdui-chip>
+            </div>
+
+            <!-- Info Grid -->
+            <div class="info-grid">
+              <div class="info-item">
+                <mdui-icon name="settings" class="info-icon"></mdui-icon>
+                <div class="info-content">
+                  <div class="info-label">配置</div>
+                  <div class="info-value" id="current-config-new">--</div>
+                </div>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <mdui-icon name="memory" class="info-icon"></mdui-icon>
+                <div class="info-content">
+                  <div class="info-label">内存</div>
+                  <div class="info-value" id="status-memory">--</div>
+                </div>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <mdui-icon name="download" class="info-icon"></mdui-icon>
+                <div class="info-content">
+                  <div class="info-label">下载</div>
+                  <div class="info-value" id="download-new">-- KB/s</div>
+                </div>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <mdui-icon name="upload" class="info-icon"></mdui-icon>
+                <div class="info-content">
+                  <div class="info-label">上传</div>
+                  <div class="info-value" id="upload-new">-- KB/s</div>
+                </div>
+              </div>
+              <div class="info-divider"></div>
+              <div class="info-item">
+                <mdui-icon name="code" class="info-icon"></mdui-icon>
+                <div class="info-content">
+                  <div class="info-label">内核</div>
+                  <div class="info-value" id="xray-version">--</div>
+                </div>
+                <mdui-button-icon id="check-update-btn" icon="system_update"
+                  style="margin-left: auto;"></mdui-button-icon>
+              </div>
+            </div>
+          </mdui-card>
+
+          <!-- Latency Detection Card (truly horizontal) -->
+          <mdui-card variant="elevated" class="compact-card">
+            <div class="compact-header">
+              <span class="card-compact-title">延迟检测</span>
+              <mdui-button-icon id="refresh-latency-btn" icon="refresh"></mdui-button-icon>
+            </div>
+            <div class="latency-row">
+              <div class="latency-cell">
+                <span class="latency-label">百度</span>
+                <span class="latency-value-horizontal" id="latency-baidu-compact">--</span>
+              </div>
+              <div class="latency-cell">
+                <span class="latency-label">谷歌</span>
+                <span class="latency-value-horizontal" id="latency-google-compact">--</span>
+              </div>
+              <div class="latency-cell">
+                <span class="latency-label">GitHub</span>
+                <span class="latency-value-horizontal" id="latency-github-compact">--</span>
+              </div>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      <!-- Config Page -->
+      <div id="config-page" class="page">
+        <div class="container">
+          <mdui-card variant="elevated">
+            <div style="padding: 20px;">
+              <div style="display: flex; align-items: center; justify-content: between; margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 20px; flex-grow: 1;">配置文件</h2>
+                <mdui-dropdown id="import-menu">
+                  <mdui-button slot="trigger" icon="add" id="add-config-btn">添加</mdui-button>
+                  <mdui-menu>
+                    <mdui-menu-item id="import-node-link">
+                      <mdui-icon slot="icon" name="link"></mdui-icon>
+                      节点链接导入
+                    </mdui-menu-item>
+                    <mdui-menu-item id="import-full-config">
+                      <mdui-icon slot="icon" name="description"></mdui-icon>
+                      完整配置导入
+                    </mdui-menu-item>
+                  </mdui-menu>
+                </mdui-dropdown>
+              </div>
+              <mdui-list id="config-list">
+                <mdui-list-item>
+                  <mdui-circular-progress></mdui-circular-progress>
+                  <div slot="headline">加载中...</div>
+                </mdui-list-item>
+              </mdui-list>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      <!-- UID Management Page -->
+      <div id="uid-page" class="page">
+        <div class="container">
+          <mdui-card variant="elevated">
+            <div style="padding: 20px;">
+              <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 20px; flex-grow: 1;">UID 白名单</h2>
+                <mdui-button icon="add" id="add-uid-btn">添加</mdui-button>
+              </div>
+              <mdui-text-field label="搜索应用" icon="search" id="app-search" style="width: 100%; margin-bottom: 16px;">
+              </mdui-text-field>
+              <mdui-list id="uid-list">
+                <mdui-list-item>
+                  <mdui-circular-progress></mdui-circular-progress>
+                  <div slot="headline">加载中...</div>
+                </mdui-list-item>
+              </mdui-list>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      <!-- Logs Page -->
+      <div id="logs-page" class="page">
+        <div class="container">
+          <!-- Service Log -->
+          <mdui-collapse accordion>
+            <mdui-collapse-item>
+              <mdui-list-item slot="header" icon="description">
+                服务日志
+                <mdui-button-icon slot="end-icon" icon="refresh" id="refresh-service-log"></mdui-button-icon>
+              </mdui-list-item>
+              <div style="padding: 16px;">
+                <div class="log-container" id="service-log">
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          <!-- Xray Log -->
+          <mdui-collapse accordion style="margin-top: 16px;">
+            <mdui-collapse-item>
+              <mdui-list-item slot="header" icon="description">
+                Xray 日志
+                <mdui-button-icon slot="end-icon" icon="refresh" id="refresh-xray-log"></mdui-button-icon>
+              </mdui-list-item>
+              <div style="padding: 16px;">
+                <div class="log-container" id="xray-log">
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+        </div>
+      </div>
+    </mdui-layout-main>
+
+    <!-- Bottom Navigation -->
+    <mdui-navigation-bar value="status" id="nav-bar">
+      <mdui-navigation-bar-item icon="home" value="status">状态</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon="settings" value="config">配置</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon="people" value="uid">白名单</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon="description" value="logs">日志</mdui-navigation-bar-item>
+    </mdui-navigation-bar>
+  </mdui-layout>
+
+  <!-- Floating Action Button -->
+  <mdui-fab id="service-fab" icon="play_arrow"
+    style="position: fixed; right: 16px; bottom: 96px; z-index: 150;"></mdui-fab>
+
+  <!-- 确认删除对话框 -->
+  <mdui-dialog id="confirm-dialog" close-on-esc close-on-overlay-click>
+    <mdui-card variant="elevated" style="margin: 0; box-shadow: none;">
+      <div style="padding: 24px 24px 16px;">
+        <h3 id="confirm-title" style="margin: 0 0 12px 0; font-size: 18px;">确认操作</h3>
+        <div id="confirm-message" style="color: var(--mdui-color-on-surface-variant); line-height: 1.6;">
+        </div>
+      </div>
+      <mdui-card-actions align="end" style="padding: 8px 16px 16px;">
+        <mdui-button id="confirm-cancel-btn">取消</mdui-button>
+        <mdui-button id="confirm-ok-btn" variant="text" style="color: var(--mdui-color-error);">确定</mdui-button>
+      </mdui-card-actions>
+    </mdui-card>
+  </mdui-dialog>
+
+
+
+  <!-- Node Link Import Dialog -->
+  <mdui-dialog id="node-link-dialog" headline="节点链接导入">
+    <mdui-text-field label="节点链接" placeholder="例如: vless://... 或 vmess://... 等" id="node-link-input" rows="3"
+      helper="支持: vless://, vmess://, trojan://, ss://, socks://, http://, https://"></mdui-text-field>
+    <mdui-button slot="action" variant="text" id="node-link-cancel">取消</mdui-button>
+    <mdui-button slot="action" variant="filled" id="node-link-save">导入</mdui-button>
+  </mdui-dialog>
+
+  <!-- Config Editor Dialog -->
+  <mdui-dialog id="config-dialog" headline="编辑配置" close-on-overlay-click="false">
+    <mdui-text-field label="文件名" id="config-filename" style="width: 100%; margin-bottom: 16px;">
+    </mdui-text-field>
+    <mdui-text-field label="配置内容" id="config-content" rows="15" variant="outlined"
+      style="width: 100%; font-family: monospace;">
+    </mdui-text-field>
+    <mdui-button slot="action" variant="text" id="config-cancel-btn">取消</mdui-button>
+    <mdui-button slot="action" variant="text" id="config-save-btn">保存</mdui-button>
+  </mdui-dialog>
+
+  <!-- UID Add Dialog -->
+  <mdui-dialog id="uid-dialog" headline="添加 UID" close-on-overlay-click="false">
+    <mdui-text-field label="应用 UID" type="number" id="uid-input" helper="输入应用的 UID 编号" style="width: 100%;">
+    </mdui-text-field>
+    <mdui-button slot="action" variant="text" id="uid-cancel-btn">取消</mdui-button>
+    <mdui-button slot="action" variant="text" id="uid-add-confirm-btn">添加</mdui-button>
+  </mdui-dialog>
+
+  <!-- App Selector Dialog -->
+  <mdui-dialog id="app-selector-dialog" headline="选择应用" close-on-overlay-click="false"
+    style="--mdui-dialog-max-width: 500px;">
+    <mdui-text-field label="搜索应用" icon="search" id="app-selector-search" style="width: 100%; margin-bottom: 16px;">
+    </mdui-text-field>
+
+    <div style="max-height: 400px; overflow-y: auto;">
+      <mdui-list id="app-selector-list">
+        <mdui-list-item style="padding: 16px;">
+          <mdui-circular-progress style="margin: 0 auto;"></mdui-circular-progress>
+          <div slot="headline" style="text-align: center;">加载应用列表...</div>
+        </mdui-list-item>
+      </mdui-list>
+    </div>
+
+    <mdui-button slot="action" variant="text" id="app-selector-cancel">取消</mdui-button>
+  </mdui-dialog>
+
+  <script type="module" src="./app.js"></script>
+</body>
+
+</html>
