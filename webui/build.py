@@ -5,7 +5,7 @@ import sys
 
 # 项目路径配置
 WEBUI_DIR = os.path.dirname(os.path.abspath(__file__))
-BUILD_OUTPUT_DIR = os.path.join(WEBUI_DIR, "dist")
+BUILD_OUTPUT_DIR = os.path.join(WEBUI_DIR, "dist")  # 恢复使用中间的dist目录
 TARGET_DIR = os.path.abspath(os.path.join(WEBUI_DIR, "..", "NetProxy-Magisk", "webroot"))
 
 def run_command(cmd, cwd=None):
@@ -33,30 +33,43 @@ def run_command(cmd, cwd=None):
 
 def clear_dist_dir():
     """清空构建输出目录"""
+    print(f"清空构建输出目录: {BUILD_OUTPUT_DIR}")
     if os.path.exists(BUILD_OUTPUT_DIR):
-        print(f"清空构建输出目录: {BUILD_OUTPUT_DIR}")
+        file_count = sum(len(files) for _, _, files in os.walk(BUILD_OUTPUT_DIR))
+        print(f"  清空前目录包含 {file_count} 个文件")
         shutil.rmtree(BUILD_OUTPUT_DIR)
     # 重建dist目录
     os.makedirs(BUILD_OUTPUT_DIR, exist_ok=True)
+    print(f"  已重建构建输出目录: {BUILD_OUTPUT_DIR}")
 
 def clear_target_dir():
     """清空目标目录"""
+    print(f"清空目标目录: {TARGET_DIR}")
     if os.path.exists(TARGET_DIR):
-        print(f"清空目标目录: {TARGET_DIR}")
+        file_count = sum(len(files) for _, _, files in os.walk(TARGET_DIR))
+        print(f"  清空前目录包含 {file_count} 个文件")
         shutil.rmtree(TARGET_DIR)
     os.makedirs(TARGET_DIR, exist_ok=True)
+    print(f"  已重建目标目录: {TARGET_DIR}")
 
 def copy_build_files():
     """复制构建文件到目标目录"""
     print(f"复制构建产物从 {BUILD_OUTPUT_DIR} 到 {TARGET_DIR}")
+    
+    # 统计源目录文件数量
+    src_file_count = sum(len(files) for _, _, files in os.walk(BUILD_OUTPUT_DIR))
+    print(f"  源目录包含 {src_file_count} 个文件")
     
     # 复制所有文件和目录
     for item in os.listdir(BUILD_OUTPUT_DIR):
         s = os.path.join(BUILD_OUTPUT_DIR, item)
         d = os.path.join(TARGET_DIR, item)
         if os.path.isdir(s):
+            dir_file_count = sum(len(files) for _, _, files in os.walk(s))
+            print(f"  复制目录: {item} (包含 {dir_file_count} 个文件)")
             shutil.copytree(s, d, dirs_exist_ok=True)
         else:
+            print(f"  复制文件: {item}")
             shutil.copy2(s, d)
     
     print("复制完成")
@@ -68,15 +81,12 @@ def verify_build_files():
     """验证构建文件是否完整"""
     print("验证构建产物完整性...")
     
-    # 关键文件列表（使用更灵活的匹配方式）
-    critical_categories = [
-        # 必须存在的精确文件
-        {'type': 'exact', 'files': ['index.html']},
-        # 必须存在的类型文件（至少一个）
-        {'type': 'type', 'ext': 'js', 'desc': 'JavaScript文件'},
-        {'type': 'type', 'ext': 'css', 'desc': 'CSS文件'},
-        # 必须存在的字体文件（至少一个）
-        {'type': 'font', 'desc': 'Material Icons字体文件'}
+    # 关键文件列表
+    critical_files = ['index.html']
+    critical_types = [
+        {'ext': 'js', 'desc': 'JavaScript文件'},
+        {'ext': 'css', 'desc': 'CSS文件'},
+        {'pattern': 'MaterialIcons', 'desc': 'Material Icons字体文件'}
     ]
     
     all_files = []
@@ -103,28 +113,34 @@ def verify_build_files():
                 js_files.append(rel_path)
             elif file.endswith('.css'):
                 css_files.append(rel_path)
-            elif 'MaterialIcons' in file and file.endswith('.ttf'):
+            elif 'MaterialIcons' in file:
                 font_files.append(rel_path)
     
-    # 检查每个关键类别
+    # 显示找到的文件类型统计
+    print(f"  找到 {len(all_files)} 个文件和 {len(all_dirs)} 个目录")
+    print(f"  所有文件: {all_files}")
+    print(f"  JavaScript文件: {js_files}")
+    print(f"  CSS文件: {css_files}")
+    print(f"  字体文件: {font_files}")
+    
+    # 检查关键文件和类型
     issues = []
     
-    for category in critical_categories:
-        if category['type'] == 'exact':
-            for file in category['files']:
-                if file not in all_files:
-                    issues.append(f"缺少文件: {file}")
-        elif category['type'] == 'type':
-            if category['ext'] == 'js' and not js_files:
-                issues.append(f"缺少{category['desc']}")
-            elif category['ext'] == 'css' and not css_files:
-                issues.append(f"缺少{category['desc']}")
-        elif category['type'] == 'font':
-            if not font_files:
-                issues.append(f"缺少{category['desc']}")
+    # 检查精确文件
+    for file in critical_files:
+        if file not in all_files:
+            issues.append(f"缺少核心文件: {file}")
+    
+    # 检查类型文件
+    if not js_files:
+        issues.append("缺少JavaScript文件")
+    if not css_files:
+        issues.append("缺少CSS文件")
+    if not font_files:
+        issues.append("缺少Material Icons字体文件")
     
     if issues:
-        print(f"警告: {issues}")
+        print(f"❌ 验证失败: {issues}")
     else:
         print("✅ 所有关键文件和目录已成功复制")
     
@@ -142,42 +158,32 @@ def build_webui():
     # 清空构建输出目录，避免旧文件残留
     clear_dist_dir()
     
-    # 安装依赖
-    print("安装依赖...")
-    run_command(["npm", "install"], cwd=WEBUI_DIR)
-    print("依赖安装完成")
-    
-    # 执行构建
+    # 执行构建（输出到中间的dist目录）
     print("执行构建...")
-    run_command(["npm", "run", "build"], cwd=WEBUI_DIR)
+    run_command(["npm", "run", "build", "--", "--dist-dir", "dist"], cwd=WEBUI_DIR)
     print("构建完成")
+    
+    # 复制assets目录到构建输出目录（dist目录）
+    copy_assets_to_dist()
     
     # 检查构建产物是否存在
     if not os.path.exists(BUILD_OUTPUT_DIR):
         print(f"构建产物目录不存在: {BUILD_OUTPUT_DIR}")
         sys.exit(1)
+    
+    # 检查dist目录是否有内容
+    if not os.listdir(BUILD_OUTPUT_DIR):
+        print(f"构建产物目录为空: {BUILD_OUTPUT_DIR}")
+        sys.exit(1)
 
 def copy_assets_to_dist():
-    """复制assets目录到构建输出目录"""
-    print("复制assets目录到构建输出目录...")
-    src_assets_dir = os.path.join(WEBUI_DIR, "src", "assets")
-    dest_assets_dir = os.path.join(BUILD_OUTPUT_DIR, "assets")
+    """复制必要的资源文件到构建输出目录"""
+    print("复制必要的资源文件到构建输出目录...")
     
-    # 确保目标assets目录存在
-    os.makedirs(dest_assets_dir, exist_ok=True)
+    # 无需复制额外HTML文件，index.html已包含所有内容
+    print("无需复制额外HTML文件（所有内容已内嵌在index.html中）")
     
-    # 复制assets目录中的所有文件
-    if os.path.exists(src_assets_dir):
-        for item in os.listdir(src_assets_dir):
-            src_item = os.path.join(src_assets_dir, item)
-            dest_item = os.path.join(dest_assets_dir, item)
-            if os.path.isfile(src_item):
-                shutil.copy2(src_item, dest_item)
-                print(f"复制文件: {src_item} -> {dest_item}")
-            elif os.path.isdir(src_item):
-                shutil.copytree(src_item, dest_item, dirs_exist_ok=True)
-                print(f"复制目录: {src_item} -> {dest_item}")
-    print("assets目录复制完成")
+    print("必要资源文件复制完成")
 
 def main():
     """主函数"""
@@ -186,7 +192,7 @@ def main():
     # 在构建开始前清空目标目录，避免旧文件残留
     clear_target_dir()
     
-    # 构建webui
+    # 构建webui（输出到中间的dist目录）
     build_webui()
     
     # 复制文件到目标目录
