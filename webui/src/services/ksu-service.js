@@ -1,4 +1,5 @@
 import { exec, listPackages, getPackagesInfo } from 'kernelsu';
+import { wrapInputStream } from 'webuix';
 import { toast } from '../utils/toast.js';
 
 /**
@@ -338,9 +339,118 @@ export class KSUService {
 
     // 获取已安装应用列表
     static async getInstalledApps() {
+        // 1. 获取基础包列表（包名 + 可选的 UID）
+        let basePackages = [];
+        
+        // 尝试 KSU listPackages
         try {
-            const packages = await listPackages('user');
-            const appsInfo = await getPackagesInfo(packages);
+            const pkgs = await listPackages('user');
+            if (pkgs && pkgs.length > 0) {
+                basePackages = pkgs.map(p => ({ packageName: p, uid: 0 }));
+            }
+        } catch (e) {
+            console.warn('listPackages failed', e);
+        }
+
+        // 如果 KSU 失败或为空，尝试 packages.list
+        if (basePackages.length === 0) {
+            const systemApps = await this.getPackagesFromSystemList();
+            if (systemApps.length > 0) {
+                basePackages = systemApps; // 包含 packageName 和 uid
+            }
+        }
+
+        if (basePackages.length === 0) return [];
+
+        // 2. 丰富应用信息 (Label, Icon, UID)
+        
+        // 场景 A: WebUI X 环境
+        if (typeof $packageManager !== 'undefined') {
+            const apps = await Promise.all(basePackages.map(async pkg => {
+                try {
+                    // 尝试获取应用信息
+                    const info = $packageManager.getApplicationInfo(pkg.packageName, 0, 0);
+                    
+                    // 获取 Label
+                    let label = pkg.packageName;
+                    try {
+                        // 尝试多种获取 Label 的方式，应对不同版本
+                        if (info.getLabel && typeof info.getLabel === 'function') label = info.getLabel();
+                        else if (info.loadLabel && typeof info.loadLabel === 'function') label = info.loadLabel($packageManager);
+                        else if (info.label) label = info.label;
+                        else if (info.toString() !== '[object Object]') label = info.toString();
+                    } catch (err) {
+                        // 忽略
+                    }
+
+                    // 获取 UID (如果 basePackages 里没有)
+                    let uid = pkg.uid;
+                    if (!uid || uid === 0) {
+                        if (info.uid) uid = info.uid;
+                        else if (info.applicationInfo && info.applicationInfo.uid) uid = info.applicationInfo.uid;
+                    }
+
+                    return {
+                        packageName: pkg.packageName,
+                        appLabel: label || pkg.packageName,
+                        uid: uid,
+                        icon: null // 懒加载
+                    };
+                } catch (e) {
+                    // 如果 getApplicationInfo 失败，但我们有 basePackage 信息，还是返回它
+                    return {
+                        packageName: pkg.packageName,
+                        appLabel: pkg.packageName,
+                        uid: pkg.uid,
+                        icon: null
+                    };
+                }
+            }));
+            
+            const validApps = apps.filter(a => a);
+
+            if (validApps.length > 0) {
+                // 尝试使用 KSU API 或 packages.list 填充缺失的 UID
+                const appsWithMissingUid = validApps.filter(a => !a.uid);
+                if (appsWithMissingUid.length > 0) {
+                    try {
+                        // 策略1: KSU API
+                        const ksuApps = await getPackagesInfo(appsWithMissingUid.map(a => a.packageName));
+                        const uidMap = {};
+                        ksuApps.forEach(a => uidMap[a.packageName] = a.uid);
+                        
+                        // 策略2: packages.list（如果 KSU API 遗漏或失败）
+                        if (Object.keys(uidMap).length < appsWithMissingUid.length) {
+                             const systemApps = await this.getPackagesFromSystemList();
+                             systemApps.forEach(a => {
+                                 if (!uidMap[a.packageName]) uidMap[a.packageName] = a.uid;
+                             });
+                        }
+
+                        appsWithMissingUid.forEach(a => {
+                            if (uidMap[a.packageName]) a.uid = uidMap[a.packageName];
+                        });
+                    } catch (e) {
+                        console.warn('Failed to fetch UIDs via KSU API', e);
+                        // 回退到 packages.list 获取 UID
+                        const systemApps = await this.getPackagesFromSystemList();
+                        const uidMap = {};
+                        systemApps.forEach(a => uidMap[a.packageName] = a.uid);
+                        appsWithMissingUid.forEach(a => {
+                            if (uidMap[a.packageName]) a.uid = uidMap[a.packageName];
+                        });
+                    }
+                }
+                return validApps;
+            }
+            console.warn('WebUI X API returned 0 valid apps, falling back to KSU API...');
+        }
+
+        // 场景 B: KSU 环境 (或者 WebUI X 彻底失败)
+        try {
+            // 提取包名列表
+            const packageNames = basePackages.map(p => p.packageName);
+            const appsInfo = await getPackagesInfo(packageNames);
 
             return appsInfo.map(app => ({
                 packageName: app.packageName,
@@ -349,9 +459,110 @@ export class KSUService {
                 icon: `ksu://icon/${app.packageName}`
             }));
         } catch (error) {
-            console.error('Failed to get apps:', error);
+            console.error('Failed to get apps via KSU API:', error);
+            // Final fallback: 返回 basePackages (可能只有包名和UID)
+            return basePackages.map(p => ({
+                packageName: p.packageName,
+                appLabel: p.packageName,
+                uid: p.uid,
+                icon: null
+            }));
+        }
+    }
+
+    static async getPackagesFromSystemList() {
+        try {
+            const content = await this.exec('cat /data/system/packages.list');
+            const lines = content.split('\n');
+            const apps = [];
+            for (const line of lines) {
+                const parts = line.split(/\s+/);
+                if (parts.length >= 2) {
+                    const packageName = parts[0];
+                    const uid = parseInt(parts[1]);
+                    if (packageName && !isNaN(uid)) {
+                        apps.push({
+                            packageName,
+                            appLabel: packageName, // Fallback label
+                            uid,
+                            icon: null
+                        });
+                    }
+                }
+            }
+            return apps;
+        } catch (e) {
+            console.error('Failed to read packages.list:', e);
             return [];
         }
     }
-}
 
+    static iconCache = new Map();
+    static iconLoadQueue = [];
+    static activeIconLoads = 0;
+    static MAX_CONCURRENT_ICON_LOADS = 4; // 限制并发数，避免旧版 WebUI X 阻塞
+
+    static clearIconLoadQueue() {
+        this.iconLoadQueue = [];
+    }
+
+    static async loadAppIcon(packageName) {
+        if (this.iconCache.has(packageName)) {
+            return this.iconCache.get(packageName);
+        }
+
+        if (typeof $packageManager === 'undefined') return null;
+
+        return new Promise((resolve) => {
+            this.iconLoadQueue.push({ packageName, resolve });
+            this.processIconLoadQueue();
+        });
+    }
+
+    static async processIconLoadQueue() {
+        if (this.activeIconLoads >= this.MAX_CONCURRENT_ICON_LOADS || this.iconLoadQueue.length === 0) {
+            return;
+        }
+
+        this.activeIconLoads++;
+        const { packageName, resolve } = this.iconLoadQueue.shift();
+
+        try {
+            const base64 = await this._doLoadAppIcon(packageName);
+            resolve(base64);
+        } catch (e) {
+            resolve(null);
+        } finally {
+            this.activeIconLoads--;
+            // 使用 setTimeout 让出主线程，避免连续处理阻塞 UI
+            setTimeout(() => this.processIconLoadQueue(), 0);
+        }
+    }
+
+    static async _doLoadAppIcon(packageName) {
+        try {
+            const stream = $packageManager.getApplicationIcon(packageName, 0, 0);
+            if (!stream) return null;
+            
+            const wrapped = await wrapInputStream(stream);
+            const buffer = await wrapped.arrayBuffer();
+            
+            const base64 = 'data:image/png;base64,' + this.arrayBufferToBase64(buffer);
+            
+            this.iconCache.set(packageName, base64);
+            return base64;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    static arrayBufferToBase64(buffer) {
+        let binary = '';
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+    }
+}

@@ -5,8 +5,10 @@ import sys
 
 # 项目路径配置
 WEBUI_DIR = os.path.dirname(os.path.abspath(__file__))
-BUILD_OUTPUT_DIR = os.path.join(WEBUI_DIR, "dist")  # 恢复使用中间的dist目录
-TARGET_DIR = os.path.abspath(os.path.join(WEBUI_DIR, "..", "NetProxy-Magisk", "webroot"))
+
+# 使用相对路径提高移植性（传递给构建命令），同时保留绝对路径用于文件操作
+REL_TARGET_DIR = os.path.normpath(os.path.join("..", "NetProxy-Magisk", "webroot"))
+TARGET_DIR = os.path.abspath(os.path.join(WEBUI_DIR, REL_TARGET_DIR))
 
 def run_command(cmd, cwd=None):
     """运行命令并返回结果"""
@@ -31,17 +33,6 @@ def run_command(cmd, cwd=None):
         print(f"标准错误: {e.stderr}")
         sys.exit(1)
 
-def clear_dist_dir():
-    """清空构建输出目录"""
-    print(f"清空构建输出目录: {BUILD_OUTPUT_DIR}")
-    if os.path.exists(BUILD_OUTPUT_DIR):
-        file_count = sum(len(files) for _, _, files in os.walk(BUILD_OUTPUT_DIR))
-        print(f"  清空前目录包含 {file_count} 个文件")
-        shutil.rmtree(BUILD_OUTPUT_DIR)
-    # 重建dist目录
-    os.makedirs(BUILD_OUTPUT_DIR, exist_ok=True)
-    print(f"  已重建构建输出目录: {BUILD_OUTPUT_DIR}")
-
 def clear_target_dir():
     """清空目标目录"""
     print(f"清空目标目录: {TARGET_DIR}")
@@ -51,31 +42,6 @@ def clear_target_dir():
         shutil.rmtree(TARGET_DIR)
     os.makedirs(TARGET_DIR, exist_ok=True)
     print(f"  已重建目标目录: {TARGET_DIR}")
-
-def copy_build_files():
-    """复制构建文件到目标目录"""
-    print(f"复制构建产物从 {BUILD_OUTPUT_DIR} 到 {TARGET_DIR}")
-    
-    # 统计源目录文件数量
-    src_file_count = sum(len(files) for _, _, files in os.walk(BUILD_OUTPUT_DIR))
-    print(f"  源目录包含 {src_file_count} 个文件")
-    
-    # 复制所有文件和目录
-    for item in os.listdir(BUILD_OUTPUT_DIR):
-        s = os.path.join(BUILD_OUTPUT_DIR, item)
-        d = os.path.join(TARGET_DIR, item)
-        if os.path.isdir(s):
-            dir_file_count = sum(len(files) for _, _, files in os.walk(s))
-            print(f"  复制目录: {item} (包含 {dir_file_count} 个文件)")
-            shutil.copytree(s, d, dirs_exist_ok=True)
-        else:
-            print(f"  复制文件: {item}")
-            shutil.copy2(s, d)
-    
-    print("复制完成")
-    
-    # 验证关键文件是否存在
-    verify_build_files()
 
 def verify_build_files():
     """验证构建文件是否完整"""
@@ -155,57 +121,25 @@ def build_webui():
     """构建webui"""
     print("开始构建webui...")
     
-    # 清空构建输出目录，避免旧文件残留
-    clear_dist_dir()
+    # 清空目标目录，确保构建输出不会与旧文件混合
+    clear_target_dir()
     
-    # 执行构建（输出到中间的dist目录）
-    print("执行构建...")
-    run_command(["npm", "run", "build", "--", "--dist-dir", "dist"], cwd=WEBUI_DIR)
+    # 直接将构建输出写入目标目录
+    print("执行构建（直接输出到目标目录）...")
+    run_command(["npm", "run", "build", "--", "--dist-dir", REL_TARGET_DIR], cwd=WEBUI_DIR)
     print("构建完成")
-    
-    # 复制assets目录到构建输出目录（dist目录）
-    copy_assets_to_dist()
-    
-    # 检查构建产物是否存在
-    if not os.path.exists(BUILD_OUTPUT_DIR):
-        print(f"构建产物目录不存在: {BUILD_OUTPUT_DIR}")
-        sys.exit(1)
-    
-    # 检查dist目录是否有内容
-    if not os.listdir(BUILD_OUTPUT_DIR):
-        print(f"构建产物目录为空: {BUILD_OUTPUT_DIR}")
-        sys.exit(1)
-
-def copy_assets_to_dist():
-    """复制必要的资源文件到构建输出目录"""
-    print("复制必要的资源文件到构建输出目录...")
-    
-    # 无需复制额外HTML文件，index.html已包含所有内容
-    print("无需复制额外HTML文件（所有内容已内嵌在index.html中）")
-    
-    print("必要资源文件复制完成")
 
 def main():
     """主函数"""
     print("=== NetProxy WebUI 构建脚本 ===")
     
-    # 在构建开始前清空目标目录，避免旧文件残留
-    clear_target_dir()
-    
-    # 构建webui（输出到中间的dist目录）
+    # 构建webui（直接输出到目标目录）
     build_webui()
     
-    # 复制文件到目标目录
-    copy_build_files()
+    # 验证输出是否完整
+    verify_build_files()
     
     print("=== 构建完成 ===")
-    
-    # 清理中间dist目录
-    print("清理中间dist目录...")
-    shutil.rmtree(BUILD_OUTPUT_DIR)
-    print("中间dist目录清理完成")
-    
-    print("=== 最终构建完成 ===")
 
 if __name__ == "__main__":
     main()

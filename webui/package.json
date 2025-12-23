@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "mdui": "^2.0.0",
-    "kernelsu": "^2.1.1"
+    "kernelsu": "^2.1.1",
+    "webuix": "^0.0.18"
   },
   "devDependencies": {
     "parcel": "^2.14.0"

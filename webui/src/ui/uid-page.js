@@ -14,8 +14,11 @@ export class UIDPageManager {
         try {
             const listEl = document.getElementById('uid-list');
 
+            // 使用当前项目数量作为骨架屏数量，避免布局偏移
+            const currentCount = listEl.children.length > 0 ? listEl.children.length : 1;
+
             // 显示骨架屏
-            this.ui.showSkeleton(listEl, 3);
+            this.ui.showSkeleton(listEl, currentCount);
 
             const uids = await KSUService.getUIDList();
 
@@ -28,7 +31,6 @@ export class UIDPageManager {
             let allApps = [];
             try {
                 allApps = await KSUService.getInstalledApps();
-                console.log(`Loaded ${allApps.length} apps for UID matching`);
             } catch (e) {
                 console.warn('Failed to load app info:', e);
             }
@@ -39,29 +41,70 @@ export class UIDPageManager {
                 uidToApp[app.uid] = app;
             });
 
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const item = entry.target;
+                        const img = item.querySelector('img.app-icon[data-package-name]');
+                        if (img) {
+                            const packageName = img.dataset.packageName;
+                            if (packageName && !img.src) {
+                                KSUService.loadAppIcon(packageName).then(base64 => {
+                                    if (base64) {
+                                        img.src = base64;
+                                        img.style.display = 'block';
+                                        const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                        if (placeholder) {
+                                            placeholder.style.display = 'none';
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                        observer.unobserve(item);
+                    }
+                });
+            }, {
+                rootMargin: '100px',
+                threshold: 0.1
+            });
+
             listEl.innerHTML = '';
             uids.forEach(uid => {
                 const item = document.createElement('mdui-list-item');
                 const app = uidToApp[parseInt(uid)];
 
-                console.log(`UID ${uid}:`, app ? app.appLabel : 'No app found');
-
                 if (app) {
                     item.setAttribute('headline', app.appLabel);
                     item.setAttribute('description', `UID: ${uid} • ${app.packageName}`);
 
-                    const iconEl = document.createElement('img');
-                    iconEl.slot = 'icon';
-                    iconEl.className = 'app-icon';
-                    iconEl.src = app.icon;
-                    iconEl.onerror = function () {
-                        this.style.display = 'none';
+                    if (app.icon) {
+                        const iconEl = document.createElement('img');
+                        iconEl.slot = 'icon';
+                        iconEl.className = 'app-icon';
+                        iconEl.src = app.icon;
+                        iconEl.onerror = function () {
+                            this.style.display = 'none';
+                            const icon = document.createElement('mdui-icon');
+                            icon.slot = 'icon';
+                            icon.setAttribute('name', 'android');
+                            this.parentElement.insertBefore(icon, this);
+                        };
+                        item.appendChild(iconEl);
+                    } else {
                         const icon = document.createElement('mdui-icon');
                         icon.slot = 'icon';
                         icon.setAttribute('name', 'android');
-                        this.parentElement.insertBefore(icon, this);
-                    };
-                    item.appendChild(iconEl);
+                        item.appendChild(icon);
+
+                        const iconEl = document.createElement('img');
+                        iconEl.slot = 'icon';
+                        iconEl.className = 'app-icon';
+                        iconEl.dataset.packageName = app.packageName;
+                        iconEl.style.display = 'none';
+                        item.appendChild(iconEl);
+                        observer.observe(item);
+                    }
                 } else {
                     item.setAttribute('headline', `UID: ${uid}`);
                     item.setAttribute('description', '应用 UID 白名单');
@@ -118,6 +161,9 @@ export class UIDPageManager {
     }
 
     renderAppList(apps) {
+        // 清空之前的图标加载队列，优先加载当前列表的图标
+        KSUService.clearIconLoadQueue();
+
         const listEl = document.getElementById('app-selector-list');
 
         if (apps.length === 0) {
@@ -126,6 +172,35 @@ export class UIDPageManager {
         }
 
         listEl.innerHTML = '';
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const item = entry.target;
+                    const img = item.querySelector('img.app-icon[data-package-name]');
+                    if (img) {
+                        const packageName = img.dataset.packageName;
+                        if (packageName && !img.src) {
+                            KSUService.loadAppIcon(packageName).then(base64 => {
+                                if (base64) {
+                                    img.src = base64;
+                                    img.style.display = 'block';
+                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                    if (placeholder) {
+                                        placeholder.style.display = 'none';
+                                    }
+                                }
+                            });
+                        }
+                    }
+                    observer.unobserve(item);
+                }
+            });
+        }, {
+            rootMargin: '100px',
+            threshold: 0.1
+        });
+
         apps.forEach(app => {
             const item = document.createElement('mdui-list-item');
             item.setAttribute('clickable', '');
@@ -151,6 +226,14 @@ export class UIDPageManager {
                 icon.slot = 'icon';
                 icon.setAttribute('name', 'android');
                 item.appendChild(icon);
+
+                const iconEl = document.createElement('img');
+                iconEl.slot = 'icon';
+                iconEl.className = 'app-icon';
+                iconEl.dataset.packageName = app.packageName;
+                iconEl.style.display = 'none';
+                item.appendChild(iconEl);
+                observer.observe(item);
             }
 
             item.addEventListener('click', async () => {
