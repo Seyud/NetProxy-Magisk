@@ -123,12 +123,20 @@ export class UI {
         document.getElementById(`${pageName}-page`).classList.add('active');
         this.currentPage = pageName;
 
-        if (pageName === 'status') this.statusPage.update();
-        if (pageName === 'config') this.configPage.update();
-        if (pageName === 'uid') this.uidPage.update();
-        if (pageName === 'logs') this.logsPage.update();
-        if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
-            debugLogger.updateUI();
+        // 只对状态页特殊处理：延迟执行更新，让导航栏动画完全完成
+        // MDUI 导航栏动画大约需要 200ms 完成
+        if (pageName === 'status') {
+            setTimeout(() => {
+                this.statusPage.update();
+            }, 200);
+        } else {
+            // 其他页面立即更新
+            if (pageName === 'config') this.configPage.update();
+            if (pageName === 'uid') this.uidPage.update();
+            if (pageName === 'logs') this.logsPage.update();
+            if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
+                debugLogger.updateUI();
+            }
         }
     }
 
@@ -200,11 +208,18 @@ export class UI {
     }
 
     applyTheme(theme) {
-        if (theme === 'auto') {
-            setTheme('auto');
-        } else {
-            setTheme(theme);
-        }
+        const html = document.documentElement;
+        
+        // 首先移除所有主题类
+        html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
+        
+        // 添加对应的主题类
+        html.classList.add(`mdui-theme-${theme}`);
+        
+        // 同时调用MDUI的setTheme确保组件内部状态正确
+        setTheme(theme);
+        
+        console.log(`Theme applied: ${theme}, classes: ${html.className}`);
     }
 
     setupDialogs() {

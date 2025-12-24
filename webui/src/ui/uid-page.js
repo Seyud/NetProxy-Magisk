@@ -134,7 +134,20 @@ export class UIDPageManager {
         if (await this.ui.confirm(`确定要删除 ${appName} 吗？`)) {
             try {
                 await KSUService.removeUID(uid);
-                toast('已删除');
+                
+                // 检查服务是否运行，如果运行则即时删除iptables规则
+                const { status } = await KSUService.getStatus();
+                if (status === 'running') {
+                    const result = await KSUService.removeUIDIptables(uid);
+                    if (result.success) {
+                        toast(`已删除 ${appName} 并即时生效`);
+                    } else {
+                        toast(`已删除 ${appName}，但规则移除失败`);
+                    }
+                } else {
+                    toast('已删除');
+                }
+                
                 this.update();
             } catch (error) {
                 toast('删除失败: ' + error.message, true);
@@ -284,4 +297,3 @@ export class UIDPageManager {
         this.renderAppList(filtered);
     }
 }
-

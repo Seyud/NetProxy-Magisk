@@ -8,7 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="app-version" content="v1.0.1-20251210-1714">
+  <meta name="app-version" content="v1.0.2-20251224">
   <title>NetProxy</title>
 
   <!-- 防止 FOUC (Flash of Unstyled Content) - 关键CSS必须内联 -->
@@ -39,9 +39,9 @@
         // 移除所有主题类
         html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
 
-        // 判断是否为亮色主题
-        var isLight = savedTheme === 'light' ||
-          (savedTheme === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+        // 判断实际应用的主题模式
+        var isDark = savedTheme === 'dark' ||
+          (savedTheme === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
         // 设置主题类
         if (savedTheme === 'light') {
@@ -54,7 +54,16 @@
 
         // 动态创建遮罩层的背景色样式
         var style = document.createElement('style');
-        style.textContent = '#fouc-overlay { background-color: ' + (isLight ? '#fafafa' : '#1a1a1a') + '; }';
+        var fallbackColor = isDark ? '#141218' : '#fef7ff';
+        
+        if (savedTheme === 'auto') {
+          // 自动模式：使用 KernelSU 注入的 Monet 变量，回退到默认颜色
+          // --background 是 KernelSU colors.css 注入的莫奈取色变量
+          style.textContent = '#fouc-overlay { background-color: var(--background, ' + fallbackColor + '); }';
+        } else {
+          // 手动模式：使用硬编码的颜色（因为手动模式下忽略 KernelSU 变量）
+          style.textContent = '#fouc-overlay { background-color: ' + fallbackColor + '; }';
+        }
         document.head.appendChild(style);
       } catch (e) {
         document.documentElement.classList.add('mdui-theme-auto');
@@ -62,13 +71,36 @@
     })();
   </script>
 
+  <!-- 
+    CSS 加载顺序很重要！
+    1. mdui.css - MDUI 组件库基础样式
+    2. material-icons.css - Material Icons 图标字体
+    3. KernelSU insets.css - 边到边适配（WebView 运行时注入）
+    4. KernelSU colors.css - Monet 颜色变量（WebView 运行时注入）
+    5. monet.css - 将 Monet 颜色映射到 MDUI 变量（必须在 colors.css 之后）
+    6. style.css - 自定义样式（使用已覆盖的颜色变量）
+  -->
+  
+  <!-- 1. MDUI 组件库 -->
   <link rel="stylesheet" href="./assets/mdui.css">
+  
+  <!-- 2. Material Icons -->
   <link rel="stylesheet" href="./assets/material-icons.css">
-  <link rel="stylesheet" href="./style.css">
-  <!-- KernelSU WebUI 边到边适配支持 -->
-  <!-- 此 CSS 由 KernelSU Manager 在运行时动态提供 -->
-  <!-- 必须在 style.css 之后加载，以覆盖默认回退值 -->
+  
+  <!-- 3. KernelSU WebUI 边到边适配 -->
+  <!-- 在 KernelSU/APatch Manager WebView 中运行时动态提供 -->
   <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
+  
+  <!-- 4. KernelSU Monet 动态颜色 -->
+  <!-- 在 Android 12+ 设备上注入系统 Monet 颜色变量 -->
+  <link rel="stylesheet" href="https://mui.kernelsu.org/internal/colors.css">
+  
+  <!-- 5. Monet 颜色到 MDUI 的映射 -->
+  <!-- 此文件将 KernelSU 注入的 Monet 变量覆盖到 MDUI 的颜色系统 -->
+  <link rel="stylesheet" href="./monet.css">
+  
+  <!-- 6. 自定义样式 -->
+  <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>

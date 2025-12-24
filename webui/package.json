@@ -5,7 +5,7 @@
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
-    "build": "parcel build --no-source-maps"
+    "build": "parcel build --no-source-maps --dist-dir ../NetProxy-Module/webroot"
   },
   "dependencies": {
     "mdui": "^2.0.0",
