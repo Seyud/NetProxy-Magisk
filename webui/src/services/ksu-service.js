@@ -344,7 +344,7 @@ export class KSUService {
         
         // 尝试 KSU listPackages
         try {
-            const pkgs = await listPackages('user');
+            const pkgs = await listPackages('all');
             if (pkgs && pkgs.length > 0) {
                 basePackages = pkgs.map(p => ({ packageName: p, uid: 0 }));
             }
