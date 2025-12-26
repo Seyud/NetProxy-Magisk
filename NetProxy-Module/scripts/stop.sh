@@ -57,27 +57,12 @@ kill_xray_process() {
 }
 
 #######################################
-# 清理 iptables 规则
+# 清理 TProxy 规则
 #######################################
-cleanup_iptables() {
-    log "INFO" "清理 iptables NAT 规则..."
-    
-    # 删除 OUTPUT -> XRAY
-    iptables -t nat -D OUTPUT -p tcp -j XRAY 2>/dev/null || true
-    
-    # 删除 root UID 规则
-    iptables -t nat -D OUTPUT -p tcp -m owner --uid-owner 0 -j RETURN 2>/dev/null || true
-    
-    # 删除所有 RETURN 规则（UID 白名单）
-    while iptables -t nat -C OUTPUT -j RETURN >/dev/null 2>&1; do
-        iptables -t nat -D OUTPUT -j RETURN >/dev/null 2>&1 || break
-    done
-    
-    # 清空并删除 XRAY 链
-    iptables -t nat -F XRAY 2>/dev/null || true
-    iptables -t nat -X XRAY 2>/dev/null || true
-    
-    log "INFO" "iptables 规则清理完成"
+cleanup_tproxy() {
+    log "INFO" "清理 TProxy 规则..."
+    "$MODDIR/scripts/tproxy.sh" disable || true
+    log "INFO" "TProxy 规则清理完成"
 }
 
 #######################################
@@ -108,11 +93,11 @@ update_status() {
 stop_xray() {
     log "INFO" "========== 开始停止 Xray 服务 =========="
     
+    # 清理 TProxy（先清理规则避免断网）
+    cleanup_tproxy
+    
     # 终止进程
     kill_xray_process
-    
-    # 清理 iptables
-    cleanup_iptables
     
     # 更新状态
     update_status

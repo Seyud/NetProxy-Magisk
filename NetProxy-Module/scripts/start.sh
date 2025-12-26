@@ -84,82 +84,6 @@ get_inbound_port() {
     fi
 }
 
-#######################################
-# 清理 iptables 规则（防止重复）
-#######################################
-cleanup_iptables() {
-    log "INFO" "清理旧的 iptables 规则..."
-    
-    # 删除 OUTPUT -> XRAY 规则
-    iptables -t nat -D OUTPUT -p tcp -j XRAY 2>/dev/null || true
-    
-    # 清空并删除 XRAY 链
-    iptables -t nat -F XRAY 2>/dev/null || true
-    iptables -t nat -X XRAY 2>/dev/null || true
-}
-
-#######################################
-# 应用 iptables NAT 规则
-# Arguments:
-#   $1 - NAT 端口
-#######################################
-apply_iptables() {
-    local nat_port="$1"
-    
-    log "INFO" "配置 iptables NAT 规则 (端口: $nat_port)..."
-    
-    # 创建 XRAY 链
-    if ! iptables -t nat -N XRAY 2>/dev/null; then
-        log "WARN" "XRAY 链已存在，清空后重用"
-        iptables -t nat -F XRAY
-    fi
-    
-    # root UID 直连
-    iptables -t nat -I OUTPUT -p tcp -m owner --uid-owner 0 -j RETURN
-    log "INFO" "已添加 root UID 直连规则"
-    
-    # 处理 UID 白名单
-    if [ -f "$UID_LIST_FILE" ] && [ -s "$UID_LIST_FILE" ]; then
-        log "INFO" "读取 UID 白名单: $UID_LIST_FILE"
-        
-        while IFS= read -r line || [ -n "$line" ]; do
-            # 移除空格和回车
-            line=$(echo "$line" | tr -d '\r' | tr -d ' ')
-            
-            # 跳过空行
-            [ -z "$line" ] && continue
-            
-            # 跳过注释行（以 # 或 // 开头）
-            case "$line" in
-                \#*|//*) continue ;;
-            esac
-            
-            # 验证是纯数字
-            case "$line" in
-                *[!0-9]*) 
-                    log "WARN" "跳过无效 UID: $line"
-                    continue 
-                    ;;
-            esac
-            
-            # 添加 iptables 规则
-            iptables -t nat -I OUTPUT -p tcp -m owner --uid-owner "$line" -j RETURN
-            log "INFO" "已添加 UID 白名单: $line"
-        done < "$UID_LIST_FILE"
-        
-        log "INFO" "UID 白名单处理完成"
-    else
-        log "INFO" "UID 白名单文件为空或不存在，跳过"
-    fi
-    
-    # XRAY 链规则：重定向到 Xray 端口
-    iptables -t nat -A XRAY -p tcp -j REDIRECT --to-ports "$nat_port"
-    log "INFO" "已添加重定向规则: -> $nat_port"
-    
-    # 将 OUTPUT 链接到 XRAY
-    iptables -t nat -A OUTPUT -p tcp -j XRAY
-    log "INFO" "已挂接 OUTPUT -> XRAY 链"
-}
 
 #######################################
 # 更新状态文件
@@ -191,7 +115,7 @@ is_xray_running() {
 #######################################
 start_xray() {
     local config_path
-    local nat_port
+    local tproxy_port
     
     log "INFO" "========== 开始启动 Xray 服务 =========="
     
@@ -203,9 +127,6 @@ start_xray() {
     fi
     
     log "INFO" "使用配置文件: $config_path"
-    
-    # 清理旧规则
-    cleanup_iptables
     
     # 启动 Xray 进程
     nohup "$XRAY_BIN" -config "$config_path" > "$XRAY_LOG_FILE" 2>&1 &
@@ -221,9 +142,9 @@ start_xray() {
         die "Xray 进程启动后立即退出，请检查配置" 1
     fi
     
-    # 获取端口并配置 iptables
-    nat_port=$(get_inbound_port "$config_path")
-    apply_iptables "$nat_port"
+    # 获取端口并配置 TProxy
+    tproxy_port=$(get_inbound_port "$config_path")
+    "$MODDIR/scripts/tproxy.sh" enable "$tproxy_port"
     
     # 更新状态
     update_status "$config_path"
