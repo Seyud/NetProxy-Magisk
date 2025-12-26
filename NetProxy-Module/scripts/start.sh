@@ -7,8 +7,10 @@ readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly XRAY_BIN="$MODDIR/bin/xray"
 readonly STATUS_FILE="$MODDIR/config/status.yaml"
 readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
-readonly UID_LIST_FILE="$MODDIR/config/uid_list.conf"
-readonly DEFAULT_PORT=1080
+readonly CONFDIR="$MODDIR/config/xray/confdir"
+readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
+readonly INBOUNDS_FILE="$CONFDIR/01_inbounds.json"
+readonly DEFAULT_TPROXY_PORT=12345
 
 #######################################
 # 记录日志
@@ -54,32 +56,28 @@ get_config_path() {
 }
 
 #######################################
-# 从配置文件提取 inbound 端口
-# Arguments:
-#   $1 - 配置文件路径
+# 从 inbounds 配置文件提取 TProxy 端口
 # Returns:
-#   端口号
+#   TProxy 端口号
 #######################################
-get_inbound_port() {
-    local config_file="$1"
-    
-    if [ ! -f "$config_file" ]; then
-        log "WARN" "配置文件不存在: $config_file，使用默认端口 $DEFAULT_PORT"
-        echo "$DEFAULT_PORT"
+get_tproxy_port() {
+    if [ ! -f "$INBOUNDS_FILE" ]; then
+        log "WARN" "inbounds 配置不存在: $INBOUNDS_FILE，使用默认端口"
+        echo "$DEFAULT_TPROXY_PORT"
         return
     fi
     
+    # 解析 tproxy-in 或第一个 dokodemo-door 的端口
     local port
-    port=$(sed -n '/\"inbounds\"/,/]/p' "$config_file" | \
-           grep -o '\"port\"[[:space:]]*:[[:space:]]*[0-9]*' | \
-           head -n 1 | \
+    port=$(grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' "$INBOUNDS_FILE" | \
+           head -n 2 | tail -n 1 | \
            grep -o '[0-9]*')
     
     if [ -z "$port" ]; then
-        log "WARN" "无法解析端口，使用默认 $DEFAULT_PORT"
-        echo "$DEFAULT_PORT"
+        log "WARN" "无法解析 TProxy 端口，使用默认 $DEFAULT_TPROXY_PORT"
+        echo "$DEFAULT_TPROXY_PORT"
     else
-        log "INFO" "解析到 inbound 端口: $port"
+        log "INFO" "解析到 TProxy 端口: $port"
         echo "$port"
     fi
 }
@@ -114,22 +112,28 @@ is_xray_running() {
 # 启动 Xray 服务
 #######################################
 start_xray() {
-    local config_path
+    local outbound_config
     local tproxy_port
     
     log "INFO" "========== 开始启动 Xray 服务 =========="
     
-    # 获取配置文件路径
-    config_path=$(get_config_path)
+    # 获取出站配置文件路径
+    outbound_config=$(get_config_path)
     
-    if [ ! -f "$config_path" ]; then
-        die "配置文件不存在: $config_path" 1
+    if [ ! -f "$outbound_config" ]; then
+        die "出站配置文件不存在: $outbound_config" 1
     fi
     
-    log "INFO" "使用配置文件: $config_path"
+    # 检查 confdir 目录
+    if [ ! -d "$CONFDIR" ]; then
+        die "confdir 目录不存在: $CONFDIR" 1
+    fi
     
-    # 启动 Xray 进程
-    nohup "$XRAY_BIN" -config "$config_path" > "$XRAY_LOG_FILE" 2>&1 &
+    log "INFO" "使用模块化配置: confdir=$CONFDIR"
+    log "INFO" "使用出站配置: $outbound_config"
+    
+    # 启动 Xray 进程（使用 -confdir + -config）
+    nohup "$XRAY_BIN" run -confdir "$CONFDIR" -config "$outbound_config" > "$XRAY_LOG_FILE" 2>&1 &
     local xray_pid=$!
     
     log "INFO" "Xray 进程已启动, PID: $xray_pid"
@@ -142,12 +146,12 @@ start_xray() {
         die "Xray 进程启动后立即退出，请检查配置" 1
     fi
     
-    # 获取端口并配置 TProxy
-    tproxy_port=$(get_inbound_port "$config_path")
+    # 获取 TProxy 端口并配置规则
+    tproxy_port=$(get_tproxy_port)
     "$MODDIR/scripts/tproxy.sh" enable "$tproxy_port"
     
     # 更新状态
-    update_status "$config_path"
+    update_status "$outbound_config"
     
     log "INFO" "========== Xray 服务启动完成 =========="
 }

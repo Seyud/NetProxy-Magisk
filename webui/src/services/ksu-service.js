@@ -44,10 +44,10 @@ export class KSUService {
         await exec(`su -c "sh ${this.MODULE_PATH}/scripts/stop.sh"`);
     }
 
-    // 获取配置文件列表
+    // 获取配置文件列表（从 outbounds 目录）
     static async getConfigList() {
         try {
-            const output = await this.exec(`ls ${this.MODULE_PATH}/config/xray/*.json 2>/dev/null || echo`);
+            const output = await this.exec(`ls ${this.MODULE_PATH}/config/xray/outbounds/*.json 2>/dev/null || echo`);
             return output.split('\n').filter(f => f).map(f => f.split('/').pop());
         } catch (error) {
             return [];
@@ -57,7 +57,7 @@ export class KSUService {
     static async deleteConfig(filename) {
         console.log('>>> KSUService.deleteConfig START, filename:', filename);
         try {
-            const cmd = `su -c "rm '${this.MODULE_PATH}/config/xray/${filename}'"`;
+            const cmd = `su -c "rm '${this.MODULE_PATH}/config/xray/outbounds/${filename}'"`;
             console.log('>>> Executing command:', cmd);
             await exec(cmd);
             console.log('>>> Delete successful (no exception)');
@@ -111,15 +111,15 @@ export class KSUService {
         }
     }
 
-    // 读取配置文件
+    // 读取配置文件（从 outbounds 目录）
     static async readConfig(filename) {
-        return await this.exec(`cat ${this.MODULE_PATH}/config/xray/${filename}`);
+        return await this.exec(`cat ${this.MODULE_PATH}/config/xray/outbounds/${filename}`);
     }
 
-    // 保存配置文件
+    // 保存配置文件（到 outbounds 目录）
     static async saveConfig(filename, content) {
         const escaped = content.replace(/'/g, "'\\''");
-        await this.exec(`echo '${escaped}' > ${this.MODULE_PATH}/config/xray/${filename}`);
+        await this.exec(`echo '${escaped}' > ${this.MODULE_PATH}/config/xray/outbounds/${filename}`);
     }
 
     // 从节点链接导入配置
@@ -189,7 +189,7 @@ export class KSUService {
             await this.stopService();
         }
 
-        const newStatus = `status: "stopped"\nconfig: "${this.MODULE_PATH}/config/xray/${filename}"`;
+        const newStatus = `status: "stopped"\nconfig: "${this.MODULE_PATH}/config/xray/outbounds/${filename}"`;
         await this.exec(`echo '${newStatus}' > ${this.MODULE_PATH}/config/status.yaml`);
     }
 
@@ -341,7 +341,7 @@ export class KSUService {
     static async getInstalledApps() {
         // 1. 获取基础包列表（包名 + 可选的 UID）
         let basePackages = [];
-        
+
         // 尝试 KSU listPackages
         try {
             const pkgs = await listPackages('all');
@@ -363,14 +363,14 @@ export class KSUService {
         if (basePackages.length === 0) return [];
 
         // 2. 丰富应用信息 (Label, Icon, UID)
-        
+
         // 场景 A: WebUI X 环境
         if (typeof $packageManager !== 'undefined') {
             const apps = await Promise.all(basePackages.map(async pkg => {
                 try {
                     // 尝试获取应用信息
                     const info = $packageManager.getApplicationInfo(pkg.packageName, 0, 0);
-                    
+
                     // 获取 Label
                     let label = pkg.packageName;
                     try {
@@ -406,7 +406,7 @@ export class KSUService {
                     };
                 }
             }));
-            
+
             const validApps = apps.filter(a => a);
 
             if (validApps.length > 0) {
@@ -418,13 +418,13 @@ export class KSUService {
                         const ksuApps = await getPackagesInfo(appsWithMissingUid.map(a => a.packageName));
                         const uidMap = {};
                         ksuApps.forEach(a => uidMap[a.packageName] = a.uid);
-                        
+
                         // 策略2: packages.list（如果 KSU API 遗漏或失败）
                         if (Object.keys(uidMap).length < appsWithMissingUid.length) {
-                             const systemApps = await this.getPackagesFromSystemList();
-                             systemApps.forEach(a => {
-                                 if (!uidMap[a.packageName]) uidMap[a.packageName] = a.uid;
-                             });
+                            const systemApps = await this.getPackagesFromSystemList();
+                            systemApps.forEach(a => {
+                                if (!uidMap[a.packageName]) uidMap[a.packageName] = a.uid;
+                            });
                         }
 
                         appsWithMissingUid.forEach(a => {
@@ -543,12 +543,12 @@ export class KSUService {
         try {
             const stream = $packageManager.getApplicationIcon(packageName, 0, 0);
             if (!stream) return null;
-            
+
             const wrapped = await wrapInputStream(stream);
             const buffer = await wrapped.arrayBuffer();
-            
+
             const base64 = 'data:image/png;base64,' + this.arrayBufferToBase64(buffer);
-            
+
             this.iconCache.set(packageName, base64);
             return base64;
         } catch (e) {

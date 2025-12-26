@@ -57,6 +57,7 @@ set_permissions() {
     set_perm_recursive "$MODPATH/bin/xray" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/start.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/stop.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/tproxy.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/update-xray.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/url2json.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/clean_reject.sh" 0 0 0755 0755
