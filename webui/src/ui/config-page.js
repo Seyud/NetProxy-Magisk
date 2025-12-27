@@ -388,8 +388,17 @@ export class ConfigPageManager {
             filenameInput.value = '';
             filenameInput.disabled = false;
             contentInput.value = JSON.stringify({
-                "inbounds": [{ "port": 1080, "protocol": "socks" }],
-                "outbounds": [{ "protocol": "freedom" }]
+                "outbounds": [
+                    {
+                        "protocol": "vless",
+                        "tag": "proxy",
+                        "settings": {
+                            "vnext": [{ "address": "", "port": 443, "users": [{ "id": "" }] }]
+                        }
+                    },
+                    { "protocol": "freedom", "tag": "direct" },
+                    { "protocol": "blackhole", "tag": "block" }
+                ]
             }, null, 2);
         }
 
