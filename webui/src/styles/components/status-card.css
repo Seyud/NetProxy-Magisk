@@ -1,0 +1,325 @@
+/**
+ * 状态卡片样式
+ * 
+ * 包含重新设计的状态卡片、紧凑状态页面、服务状态卡片等
+ */
+
+/* ==================== 重新设计的状态卡片 ==================== */
+
+.status-card-new {
+  padding: 16px !important;
+}
+
+/* 主状态显示 */
+.status-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--monet-outline-variant, var(--mdui-color-outline-variant));
+}
+
+.status-left {
+  flex: 1;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--monet-surface-container, var(--mdui-color-surface-container));
+  border-radius: 20px;
+  margin-bottom: 6px;
+}
+
+.status-badge-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--monet-outline, var(--mdui-color-outline));
+}
+
+.status-badge-dot.running {
+  background: #4CAF50;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+  animation: pulse-status 2s ease infinite;
+}
+
+.status-badge-dot.stopped {
+  background: #F44336;
+}
+
+@keyframes pulse-status {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.status-badge span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+}
+
+.status-detail {
+  font-size: 12px;
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+  margin-left: 12px;
+}
+
+/* ==================== 信息网格 ==================== */
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-icon {
+  font-size: 20px;
+  color: var(--monet-primary, var(--mdui-color-primary));
+}
+
+.info-content {
+  flex: 1;
+}
+
+.info-label {
+  font-size: 11px;
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+}
+
+.info-divider {
+  width: 1px;
+  height: 30px;
+  background: var(--monet-outline-variant, var(--mdui-color-outline-variant));
+}
+
+/* 响应式 - 新状态卡片 */
+@media (max-width: 600px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+  }
+
+  .info-divider {
+    display: none;
+  }
+}
+
+/* ==================== 紧凑状态页面样式 ==================== */
+
+/* 紧凑卡片基础 */
+.compact-card {
+  padding: 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+}
+
+/* 紧凑头部 */
+.compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-compact-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+}
+
+/* 状态和速度行 */
+.status-speed-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.status-info {
+  flex: 1;
+}
+
+/* 状态指示器 */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--monet-outline, var(--mdui-color-outline));
+  transition: all 0.3s ease;
+}
+
+.status-dot.running {
+  background: #4CAF50;
+  box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.2);
+  animation: pulse-dot 2s ease infinite;
+}
+
+.status-dot.stopped {
+  background: #F44336;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.status-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+}
+
+.status-time {
+  font-size: 12px;
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+}
+
+/* 响应式 - 紧凑状态 */
+@media (max-width: 600px) {
+  .status-speed-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ==================== 服务状态卡片 - Hero 区域 ==================== */
+
+.status-hero {
+  text-align: center;
+  padding: 20px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--monet-primary-container, var(--mdui-color-primary-container)) 0%, var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) 100%);
+  margin-bottom: 12px;
+}
+
+.status-icon-container {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--monet-surface, var(--mdui-color-surface));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.status-icon-container.running {
+  background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%);
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+.status-icon-container.stopped {
+  background: linear-gradient(135deg, #F44336 0%, #EF5350 100%);
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+
+  50% {
+    box-shadow: 0 0 0 15px rgba(76, 175, 80, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
+}
+
+.status-icon {
+  width: 36px;
+  height: 36px;
+  fill: white;
+}
+
+.status-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+  letter-spacing: -0.5px;
+}
+
+.status-subtitle {
+  font-size: 14px;
+  margin: 0;
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+  opacity: 0.8;
+}
+
+.status-details {
+  margin-top: 8px;
+}
+
+/* 响应式 - Hero 区域 */
+@media (max-width: 600px) {
+  .status-hero {
+    padding: 24px 16px;
+  }
+
+  .status-icon-container {
+    width: 64px;
+    height: 64px;
+  }
+
+  .status-title {
+    font-size: 28px;
+  }
+}
+
+/* ==================== 卡片标题 ==================== */
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface));
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}

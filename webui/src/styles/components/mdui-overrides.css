@@ -1,0 +1,251 @@
+/**
+ * MDUI 组件 Monet 颜色覆盖
+ * 
+ * 直接覆盖 MDUI 组件的背景色以支持 Monet 动态取色
+ */
+
+/* ==================== 卡片背景 ==================== */
+
+mdui-card {
+  background-color: var(--monet-surface-container-low, var(--mdui-color-surface-container-low)) !important;
+}
+
+mdui-card[variant="elevated"] {
+  background-color: var(--monet-surface-container-low, var(--mdui-color-surface-container-low)) !important;
+}
+
+mdui-card[variant="filled"] {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-highest)) !important;
+}
+
+mdui-card[variant="outlined"] {
+  background-color: var(--monet-surface, var(--mdui-color-surface)) !important;
+  border-color: var(--monet-outline-variant, var(--mdui-color-outline-variant)) !important;
+}
+
+/* ==================== 顶部应用栏 ==================== */
+
+mdui-top-app-bar {
+  background-color: var(--monet-surface, var(--mdui-color-surface)) !important;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+/* ==================== 底部导航栏 ==================== */
+
+mdui-navigation-bar {
+  background-color: var(--monet-surface-container, var(--mdui-color-surface-container)) !important;
+}
+
+/* 导航栏项目 - 激活状态使用 Monet primary */
+mdui-navigation-bar-item[active]::part(indicator) {
+  background-color: var(--monet-secondary-container, var(--mdui-color-secondary-container)) !important;
+}
+
+mdui-navigation-bar-item[active]::part(icon),
+mdui-navigation-bar-item[active]::part(label) {
+  color: var(--monet-on-secondary-container, var(--mdui-color-on-secondary-container)) !important;
+}
+
+/* ==================== 按钮 ==================== */
+
+mdui-button {
+  --mdui-comp-filled-button-container-color: var(--monet-primary);
+}
+
+mdui-button[variant="filled"] {
+  background-color: var(--monet-primary, var(--mdui-color-primary)) !important;
+  color: var(--monet-on-primary, var(--mdui-color-on-primary)) !important;
+}
+
+mdui-button[variant="tonal"] {
+  background-color: var(--monet-secondary-container, var(--mdui-color-secondary-container)) !important;
+  color: var(--monet-on-secondary-container, var(--mdui-color-on-secondary-container)) !important;
+}
+
+mdui-button[variant="outlined"] {
+  border-color: var(--monet-outline, var(--mdui-color-outline)) !important;
+  color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+mdui-button[variant="text"] {
+  color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+/* ==================== 图标按钮 ==================== */
+
+mdui-button-icon {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+/* ==================== 浮动操作按钮 FAB ==================== */
+
+mdui-fab {
+  background-color: var(--monet-primary-container, var(--mdui-color-primary-container)) !important;
+  color: var(--monet-on-primary-container, var(--mdui-color-on-primary-container)) !important;
+}
+
+/* ==================== 芯片 Chip ==================== */
+
+mdui-chip {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+/* ==================== 对话框 ==================== */
+
+/* 对话框 - 面板背景 */
+mdui-dialog::part(panel) {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+}
+
+/* 对话框 - 遮罩层保持半透明效果 */
+mdui-dialog::part(overlay) {
+  background-color: rgba(0, 0, 0, 0.32) !important;
+}
+
+/* ==================== 列表 ==================== */
+
+mdui-list {
+  background-color: transparent !important;
+}
+
+mdui-list-item {
+  background-color: transparent !important;
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-list-item:hover {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+}
+
+/* 列表项标题和描述文字颜色 */
+mdui-list-item::part(headline) {
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-list-item::part(description) {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+mdui-list-item[clickable] {
+  cursor: pointer;
+}
+
+mdui-list-item[clickable]:hover {
+  background-color: var(--monet-surface-variant, var(--mdui-color-surface-variant));
+}
+
+/* ==================== 折叠面板 ==================== */
+
+/* 折叠面板 - 保持圆角 */
+mdui-collapse {
+  background-color: var(--monet-surface-container-low, var(--mdui-color-surface-container-low)) !important;
+  border-radius: 12px;
+  overflow: hidden; /* 确保子元素不超出圆角边界 */
+}
+
+mdui-collapse-item {
+  background-color: transparent !important;
+}
+
+/* 折叠面板展开状态保持圆角 */
+mdui-collapse-item[open] {
+  border-radius: 12px;
+}
+
+/* 折叠面板头部圆角 */
+mdui-collapse-item::part(header) {
+  border-radius: 12px;
+}
+
+mdui-collapse-item[open]::part(header) {
+  border-radius: 12px 12px 0 0;
+}
+
+/* 折叠面板内容区域圆角 */
+mdui-collapse-item::part(body) {
+  border-radius: 0 0 12px 12px;
+}
+
+/* ==================== 文本输入框 ==================== */
+
+mdui-text-field {
+  --mdui-comp-text-field-filled-container-color: var(--monet-surface-container-highest, var(--mdui-color-surface-container-highest));
+}
+
+mdui-text-field::part(container) {
+  background-color: var(--monet-surface-container-highest, var(--mdui-color-surface-container-highest)) !important;
+}
+
+mdui-text-field::part(input) {
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-text-field::part(label) {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+mdui-text-field[focused]::part(label) {
+  color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+mdui-text-field::part(supporting) {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+/* ==================== 下拉菜单 ==================== */
+
+mdui-dropdown {
+  background-color: transparent !important;
+}
+
+mdui-menu {
+  background-color: var(--monet-surface-container, var(--mdui-color-surface-container)) !important;
+}
+
+mdui-menu-item {
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-menu-item:hover {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+}
+
+/* ==================== 进度指示器 ==================== */
+
+mdui-circular-progress {
+  --mdui-comp-circular-progress-indicator-color: var(--monet-primary);
+}
+
+/* ==================== 图标颜色 ==================== */
+
+mdui-icon {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+}
+
+/* ==================== 状态芯片 ==================== */
+
+#status-chip {
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+#status-chip[data-status="running"] {
+  background-color: rgb(76, 175, 80) !important;
+  color: white !important;
+}
+
+#status-chip[data-status="stopped"] {
+  background-color: rgb(244, 67, 54) !important;
+  color: white !important;
+}
+
+#status-chip-new {
+  font-size: 12px;
+  height: 26px;
+}
+
+#status-chip-compact {
+  font-size: 12px;
+  height: 24px;
+}
