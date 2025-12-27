@@ -9,6 +9,49 @@ export class ConfigPageManager {
         this.ui = ui;
     }
 
+    /**
+     * 从配置内容解析出站信息
+     */
+    parseOutboundInfo(content) {
+        try {
+            const config = JSON.parse(content);
+            const outbounds = config.outbounds || [];
+
+            // 查找第一个非 direct/freedom/blackhole 的出站
+            for (const outbound of outbounds) {
+                const protocol = outbound.protocol;
+                if (!protocol || ['freedom', 'blackhole', 'dns'].includes(protocol)) {
+                    continue;
+                }
+
+                let address = '';
+                let port = '';
+
+                // 根据协议解析地址和端口
+                if (outbound.settings) {
+                    // vless, vmess, trojan 使用 vnext
+                    if (outbound.settings.vnext && outbound.settings.vnext[0]) {
+                        address = outbound.settings.vnext[0].address || '';
+                        port = outbound.settings.vnext[0].port || '';
+                    }
+                    // shadowsocks 使用 servers
+                    else if (outbound.settings.servers && outbound.settings.servers[0]) {
+                        address = outbound.settings.servers[0].address || '';
+                        port = outbound.settings.servers[0].port || '';
+                    }
+                }
+
+                return { protocol, address, port };
+            }
+
+            // 如果只有 freedom 类型，返回直连信息
+            return { protocol: 'direct', address: '直连模式', port: '' };
+        } catch (e) {
+            console.warn('Failed to parse config:', e);
+            return { protocol: 'unknown', address: '', port: '' };
+        }
+    }
+
     async update() {
         try {
             const listEl = document.getElementById('config-list');
@@ -24,58 +67,102 @@ export class ConfigPageManager {
                 return;
             }
 
+            // 并行读取所有配置文件内容
+            const configInfoPromises = configs.map(async filename => {
+                try {
+                    const content = await KSUService.readConfig(filename);
+                    return { filename, info: this.parseOutboundInfo(content) };
+                } catch (e) {
+                    return { filename, info: { protocol: 'unknown', address: '', port: '' } };
+                }
+            });
+            const configInfos = await Promise.all(configInfoPromises);
+            const infoMap = new Map(configInfos.map(c => [c.filename, c.info]));
+
             listEl.innerHTML = '';
             configs.forEach(filename => {
                 const item = document.createElement('mdui-list-item');
                 item.setAttribute('clickable', '');
-                item.setAttribute('headline', filename);
-                item.setAttribute('icon', 'description');
+
+                // 显示名称（移除 .json 后缀）
+                const displayName = filename.replace(/\.json$/i, '');
+                item.setAttribute('headline', displayName);
+
+                // 获取出站信息
+                const info = infoMap.get(filename) || { protocol: 'unknown', address: '', port: '' };
+
+                // 显示协议、地址、端口
+                const description = info.port
+                    ? `${info.protocol} • ${info.address}:${info.port}`
+                    : `${info.protocol} • ${info.address}`;
+                item.setAttribute('description', description);
 
                 const isCurrent = filename === currentConfig;
-                console.log(`Config: ${filename}, isCurrent: ${isCurrent}, currentConfig: ${currentConfig}`);
 
+                // 当前配置标记
                 if (isCurrent) {
                     const chip = document.createElement('mdui-chip');
                     chip.slot = 'end';
                     chip.textContent = '当前';
+                    chip.style.marginRight = '8px';
                     item.appendChild(chip);
                 }
 
-                const editBtn = document.createElement('mdui-button');
-                editBtn.slot = 'end';
-                editBtn.setAttribute('variant', 'text');
-                editBtn.setAttribute('icon', 'edit');
-                editBtn.textContent = '编辑';
-                editBtn.addEventListener('click', async (e) => {
+                // 更多按钮（三点菜单）
+                const dropdown = document.createElement('mdui-dropdown');
+                dropdown.setAttribute('placement', 'bottom-end');
+                dropdown.slot = 'end-icon';
+
+                const menuBtn = document.createElement('mdui-button-icon');
+                menuBtn.setAttribute('slot', 'trigger');
+                menuBtn.setAttribute('icon', 'more_vert');
+                menuBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
+                });
+                dropdown.appendChild(menuBtn);
+
+                const menu = document.createElement('mdui-menu');
+
+                // 编辑选项
+                const editItem = document.createElement('mdui-menu-item');
+                editItem.innerHTML = '<mdui-icon slot="icon" name="edit"></mdui-icon>编辑';
+                editItem.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    dropdown.open = false;
                     await this.ui.showConfigDialog(filename);
                 });
-                item.appendChild(editBtn);
-                console.log(`Edit button added for ${filename}`);
+                menu.appendChild(editItem);
 
+                // 测试选项
+                const testItem = document.createElement('mdui-menu-item');
+                testItem.innerHTML = '<mdui-icon slot="icon" name="speed"></mdui-icon>测试';
+                testItem.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    dropdown.open = false;
+                    await this.testConfig(filename, info.address, info.port);
+                });
+                menu.appendChild(testItem);
+
+                // 删除选项（当前配置不可删除）
                 if (!isCurrent) {
-                    console.log(`Creating delete button for ${filename}`);
-                    const deleteBtn = document.createElement('mdui-button-icon');
-                    deleteBtn.slot = 'end-icon';
-                    deleteBtn.setAttribute('icon', 'delete');
-                    deleteBtn.style.color = 'var(--mdui-color-error)';
-                    deleteBtn.addEventListener('click', async (e) => {
+                    const deleteItem = document.createElement('mdui-menu-item');
+                    deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除';
+                    deleteItem.style.color = 'var(--mdui-color-error)';
+                    deleteItem.addEventListener('click', async (e) => {
                         e.stopPropagation();
-                        console.log(`Delete button clicked for ${filename}`);
+                        dropdown.open = false;
                         await this.deleteConfig(filename);
                     });
-                    item.appendChild(deleteBtn);
-                    console.log(`Delete button added for ${filename}, element:`, deleteBtn);
-                } else {
-                    console.log(`Skipping delete button for current config: ${filename}`);
+                    menu.appendChild(deleteItem);
                 }
 
+                dropdown.appendChild(menu);
+                item.appendChild(dropdown);
+
+                // 点击切换配置
                 item.addEventListener('click', () => {
                     if (!isCurrent) {
-                        console.log('Config clicked:', filename);
-                        setTimeout(() => {
-                            this.switchConfig(filename);
-                        }, 0);
+                        this.switchConfig(filename);
                     }
                 });
 
@@ -86,21 +173,30 @@ export class ConfigPageManager {
         }
     }
 
+    async testConfig(filename, address, port) {
+        if (!address || address === '直连模式') {
+            toast('直连模式无需测试');
+            return;
+        }
+
+        try {
+            toast('正在测试连接...');
+            const latency = await KSUService.getPingLatency(address);
+            toast(`${filename.replace(/\.json$/i, '')}: ${latency}`);
+        } catch (error) {
+            toast('测试失败: ' + error.message);
+        }
+    }
+
     async deleteConfig(filename) {
         try {
-            console.log('deleteConfig called for:', filename);
-
-            const confirmed = await this.ui.confirm(`确定要删除配置文件 "${filename}" 吗？\n\n此操作不可恢复。`);
-            console.log('User confirmed:', confirmed);
+            const confirmed = await this.ui.confirm(`确定要删除配置文件 "${filename.replace(/\.json$/i, '')}" 吗？\n\n此操作不可恢复。`);
 
             if (!confirmed) {
-                console.log('User cancelled deletion');
                 return;
             }
 
-            console.log('Calling KSUService.deleteConfig...');
             const result = await KSUService.deleteConfig(filename);
-            console.log('Delete result:', result);
 
             if (result && result.success) {
                 toast('配置已删除');
@@ -115,11 +211,9 @@ export class ConfigPageManager {
     }
 
     async switchConfig(filename) {
-        console.log('switchConfig executing for:', filename);
-
         try {
             await KSUService.switchConfig(filename);
-            toast('已切换到: ' + filename);
+            toast('已切换到: ' + filename.replace(/\.json$/i, ''));
 
             await this.update();
             await this.ui.statusPage.update();
@@ -211,4 +305,3 @@ export class ConfigPageManager {
         }
     }
 }
-
