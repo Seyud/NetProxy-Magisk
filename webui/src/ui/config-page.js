@@ -282,20 +282,23 @@ export class ConfigPageManager {
     // ===================== 订阅管理 =====================
 
     async updateSubscription(name) {
-        try {
-            toast(`正在更新订阅 "${name}"...`);
+        toast(`正在更新订阅 "${name}"...`);
 
-            // 先显示骨架屏
-            const listEl = document.getElementById('config-list');
-            this.ui.showSkeleton(listEl, 5);
+        // 先显示骨架屏
+        const listEl = document.getElementById('config-list');
+        this.ui.showSkeleton(listEl, 5);
 
-            await KSUService.updateSubscription(name);
-            toast('订阅更新成功');
-            this.update();
-        } catch (error) {
-            toast('更新失败: ' + error.message);
-            this.update();
-        }
+        // 使用 setTimeout 让浏览器先渲染 UI
+        setTimeout(async () => {
+            try {
+                await KSUService.updateSubscription(name);
+                toast('订阅更新成功');
+                this.update();
+            } catch (error) {
+                toast('更新失败: ' + error.message);
+                this.update();
+            }
+        }, 50);
     }
 
     async deleteSubscription(name) {
@@ -342,40 +345,31 @@ export class ConfigPageManager {
             return;
         }
 
-        // 禁用按钮，显示加载状态
-        saveBtn.disabled = true;
-        saveBtn.loading = true;
-        cancelBtn.disabled = true;
-        nameInput.disabled = true;
-        urlInput.disabled = true;
+        // 关闭对话框
+        dialog.open = false;
 
-        try {
-            toast('正在下载订阅，请稍候...');
+        // 清空输入
+        nameInput.value = '';
+        urlInput.value = '';
 
-            // 先关闭对话框，在后台异步处理
-            dialog.open = false;
+        // 显示骨架屏
+        const listEl = document.getElementById('config-list');
+        this.ui.showSkeleton(listEl, 5);
 
-            // 显示配置列表骨架屏
-            const listEl = document.getElementById('config-list');
-            this.ui.showSkeleton(listEl, 5);
+        toast('正在下载订阅，请稍候...');
 
-            await KSUService.addSubscription(name, url);
-            toast('订阅添加成功');
-            this.expandedGroups.add(name);
-            this.update();
-        } catch (error) {
-            toast('添加失败: ' + error.message);
-            this.update();
-        } finally {
-            // 恢复按钮状态
-            saveBtn.disabled = false;
-            saveBtn.loading = false;
-            cancelBtn.disabled = false;
-            nameInput.disabled = false;
-            urlInput.disabled = false;
-            nameInput.value = '';
-            urlInput.value = '';
-        }
+        // 使用 setTimeout 让浏览器先渲染 UI，再执行阻塞操作
+        setTimeout(async () => {
+            try {
+                await KSUService.addSubscription(name, url);
+                toast('订阅添加成功');
+                this.expandedGroups.add(name);
+                this.update();
+            } catch (error) {
+                toast('添加失败: ' + error.message);
+                this.update();
+            }
+        }, 50);
     }
 
     // ===================== 原有方法 =====================

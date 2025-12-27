@@ -283,22 +283,57 @@ export class KSUService {
         }
     }
 
-    // 添加订阅
+    // 添加订阅（后台执行，不阻塞 UI）
     static async addSubscription(name, url) {
-        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/subscription.sh add '${name}' '${url}'"`);
-        if (result.errno !== 0) {
-            throw new Error(result.stderr || '添加订阅失败');
-        }
-        return { success: true };
+        const statusFile = `${this.MODULE_PATH}/config/.sub_status`;
+
+        // 清除旧状态文件
+        await this.exec(`rm -f ${statusFile}`);
+
+        // 后台运行脚本，完成后写入状态
+        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/subscription.sh add \\"${name}\\" \\"${url}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
+
+        // 轮询等待完成（最多 60 秒）
+        return await this.waitForSubscriptionComplete(statusFile, 60000);
     }
 
-    // 更新订阅
+    // 更新订阅（后台执行，不阻塞 UI）
     static async updateSubscription(name) {
-        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/subscription.sh update '${name}'"`);
-        if (result.errno !== 0) {
-            throw new Error(result.stderr || '更新订阅失败');
+        const statusFile = `${this.MODULE_PATH}/config/.sub_status`;
+
+        // 清除旧状态文件
+        await this.exec(`rm -f ${statusFile}`);
+
+        // 后台运行脚本
+        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/subscription.sh update \\"${name}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
+
+        // 轮询等待完成
+        return await this.waitForSubscriptionComplete(statusFile, 60000);
+    }
+
+    // 轮询等待订阅操作完成
+    static async waitForSubscriptionComplete(statusFile, timeout) {
+        const startTime = Date.now();
+        const pollInterval = 500; // 每 500ms 检查一次
+
+        while (Date.now() - startTime < timeout) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+            // 使用 exec 直接调用，检查返回值而不是抛出异常
+            const result = await exec(`cat ${statusFile} 2>/dev/null || echo ""`);
+            const status = (result.stdout || '').trim();
+
+            if (status === 'success') {
+                await exec(`rm -f ${statusFile}`);
+                return { success: true };
+            } else if (status === 'fail') {
+                await exec(`rm -f ${statusFile}`);
+                throw new Error('订阅操作失败');
+            }
+            // 状态文件不存在或为空，继续等待
         }
-        return { success: true };
+
+        throw new Error('操作超时');
     }
 
     // 删除订阅
