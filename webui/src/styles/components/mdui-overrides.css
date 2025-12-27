@@ -285,7 +285,22 @@ mdui-menu-item:hover {
 /* ==================== 进度指示器 ==================== */
 
 mdui-circular-progress {
-  --mdui-comp-circular-progress-indicator-color: var(--monet-primary);
+  /* 覆盖 MDUI circular-progress 的指示器颜色为 Monet 主色 */
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+}
+
+/* 使用 ::part 选择器确保颜色正确应用到 Shadow DOM 内部 */
+mdui-circular-progress::part(indicator) {
+  stroke: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+mdui-linear-progress {
+  /* 线性进度条也使用 Monet 主色 */
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+}
+
+mdui-linear-progress::part(indicator) {
+  background-color: var(--monet-primary, var(--mdui-color-primary)) !important;
 }
 
 /* ==================== 图标颜色 ==================== */

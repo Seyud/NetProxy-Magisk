@@ -49,7 +49,6 @@ export class ConfigPageManager {
     async update() {
         try {
             const listEl = document.getElementById('config-list');
-            this.ui.showSkeleton(listEl, 3, { showIcon: false });
 
             const groups = await KSUService.getConfigGroups();
             const { config: currentConfig } = await KSUService.getStatus();
