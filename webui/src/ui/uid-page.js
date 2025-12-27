@@ -79,15 +79,28 @@ export class UIDPageManager {
                 pkgToApp[app.packageName] = app;
             });
 
-            // 图标懒加载观察器
+            // 图标懒加载观察器 - 支持 KSU API 和 WebUI X 两种方式
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         const item = entry.target;
-                        const img = item.querySelector('img.app-icon[data-package-name]');
-                        if (img) {
+                        const img = item.querySelector('img.app-icon');
+                        if (img && !img.src) {
+                            const iconUrl = img.dataset.iconUrl;
                             const packageName = img.dataset.packageName;
-                            if (packageName && !img.src) {
+
+                            if (iconUrl) {
+                                // KSU API 方式：直接使用 ksu://icon/ URL
+                                img.src = iconUrl;
+                                img.onload = function () {
+                                    this.style.display = 'block';
+                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                    if (placeholder) {
+                                        placeholder.style.display = 'none';
+                                    }
+                                };
+                            } else if (packageName) {
+                                // WebUI X 方式：通过 $packageManager 加载
                                 KSUService.loadAppIcon(packageName).then(base64 => {
                                     if (base64) {
                                         img.src = base64;
@@ -117,33 +130,34 @@ export class UIDPageManager {
                     item.setAttribute('headline', app.appLabel);
                     item.setAttribute('description', packageName);
 
-                    if (app.icon) {
-                        const iconEl = document.createElement('img');
-                        iconEl.slot = 'icon';
-                        iconEl.className = 'app-icon';
-                        iconEl.src = app.icon;
-                        iconEl.onerror = function () {
-                            this.style.display = 'none';
-                            const icon = document.createElement('mdui-icon');
-                            icon.slot = 'icon';
-                            icon.setAttribute('name', 'android');
-                            this.parentElement.insertBefore(icon, this);
-                        };
-                        item.appendChild(iconEl);
-                    } else {
-                        const icon = document.createElement('mdui-icon');
-                        icon.slot = 'icon';
-                        icon.setAttribute('name', 'android');
-                        item.appendChild(icon);
+                    // 统一使用懒加载方式
+                    const icon = document.createElement('mdui-icon');
+                    icon.slot = 'icon';
+                    icon.setAttribute('name', 'android');
+                    item.appendChild(icon);
 
-                        const iconEl = document.createElement('img');
-                        iconEl.slot = 'icon';
-                        iconEl.className = 'app-icon';
-                        iconEl.dataset.packageName = packageName;
-                        iconEl.style.display = 'none';
-                        item.appendChild(iconEl);
-                        observer.observe(item);
+                    const iconEl = document.createElement('img');
+                    iconEl.slot = 'icon';
+                    iconEl.className = 'app-icon';
+                    iconEl.style.display = 'none';
+
+                    if (app.icon) {
+                        // KSU API 方式：有 ksu://icon/ URL
+                        iconEl.dataset.iconUrl = app.icon;
                     }
+                    // WebUI X 方式：通过包名懒加载
+                    iconEl.dataset.packageName = packageName;
+
+                    iconEl.onerror = function () {
+                        this.style.display = 'none';
+                        const placeholder = this.parentElement.querySelector('mdui-icon[slot="icon"]');
+                        if (placeholder) {
+                            placeholder.style.display = '';
+                        }
+                    };
+
+                    item.appendChild(iconEl);
+                    observer.observe(item);
                 } else {
                     item.setAttribute('headline', packageName);
                     item.setAttribute('description', '未安装或无法识别');
@@ -257,6 +271,8 @@ export class UIDPageManager {
         KSUService.clearIconLoadQueue();
 
         const listEl = document.getElementById('app-selector-list');
+        // 获取滚动容器作为 IntersectionObserver 的 root
+        const scrollContainer = listEl.parentElement;
 
         if (apps.length === 0) {
             listEl.innerHTML = '<mdui-list-item><div slot="headline">没有找到应用</div></mdui-list-item>';
@@ -269,10 +285,23 @@ export class UIDPageManager {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
                     const item = entry.target;
-                    const img = item.querySelector('img.app-icon[data-package-name]');
-                    if (img) {
+                    const img = item.querySelector('img.app-icon');
+                    if (img && !img.src) {
+                        const iconUrl = img.dataset.iconUrl;
                         const packageName = img.dataset.packageName;
-                        if (packageName && !img.src) {
+
+                        if (iconUrl) {
+                            // KSU API 方式：直接使用 ksu://icon/ URL
+                            img.src = iconUrl;
+                            img.onload = function () {
+                                this.style.display = 'block';
+                                const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                if (placeholder) {
+                                    placeholder.style.display = 'none';
+                                }
+                            };
+                        } else if (packageName) {
+                            // WebUI X 方式：通过 $packageManager 加载
                             KSUService.loadAppIcon(packageName).then(base64 => {
                                 if (base64) {
                                     img.src = base64;
@@ -289,7 +318,8 @@ export class UIDPageManager {
                 }
             });
         }, {
-            rootMargin: '100px',
+            root: scrollContainer,
+            rootMargin: '50px',
             threshold: 0.1
         });
 
@@ -299,34 +329,34 @@ export class UIDPageManager {
             item.setAttribute('headline', app.appLabel);
             item.setAttribute('description', app.packageName);
 
-            // 添加应用图标
-            if (app.icon) {
-                const iconEl = document.createElement('img');
-                iconEl.slot = 'icon';
-                iconEl.className = 'app-icon';
-                iconEl.src = app.icon;
-                iconEl.onerror = function () {
-                    this.style.display = 'none';
-                    const icon = document.createElement('mdui-icon');
-                    icon.slot = 'icon';
-                    icon.setAttribute('name', 'android');
-                    this.parentElement.insertBefore(icon, this);
-                };
-                item.appendChild(iconEl);
-            } else {
-                const icon = document.createElement('mdui-icon');
-                icon.slot = 'icon';
-                icon.setAttribute('name', 'android');
-                item.appendChild(icon);
+            // 添加应用图标 - 统一使用懒加载
+            const icon = document.createElement('mdui-icon');
+            icon.slot = 'icon';
+            icon.setAttribute('name', 'android');
+            item.appendChild(icon);
 
-                const iconEl = document.createElement('img');
-                iconEl.slot = 'icon';
-                iconEl.className = 'app-icon';
-                iconEl.dataset.packageName = app.packageName;
-                iconEl.style.display = 'none';
-                item.appendChild(iconEl);
-                observer.observe(item);
+            const iconEl = document.createElement('img');
+            iconEl.slot = 'icon';
+            iconEl.className = 'app-icon';
+            iconEl.style.display = 'none';
+
+            if (app.icon) {
+                // KSU API 方式：有 ksu://icon/ URL，也使用懒加载
+                iconEl.dataset.iconUrl = app.icon;
             }
+            // WebUI X 方式：通过包名懒加载
+            iconEl.dataset.packageName = app.packageName;
+
+            iconEl.onerror = function () {
+                this.style.display = 'none';
+                const placeholder = this.parentElement.querySelector('mdui-icon[slot="icon"]');
+                if (placeholder) {
+                    placeholder.style.display = '';
+                }
+            };
+
+            item.appendChild(iconEl);
+            observer.observe(item);
 
             item.addEventListener('click', async () => {
                 await this.addApp(app);
