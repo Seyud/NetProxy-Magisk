@@ -8,6 +8,7 @@ export class ConfigPageManager {
     constructor(ui) {
         this.ui = ui;
         this.expandedGroups = new Set(['默认分组']); // 默认展开的分组
+        this.currentOpenDropdown = null; // 当前打开的下拉菜单
     }
 
     /**
@@ -192,11 +193,26 @@ export class ConfigPageManager {
         menuBtn.setAttribute('slot', 'trigger');
         menuBtn.setAttribute('icon', 'more_vert');
         // 阻止所有事件冒泡到父列表项，防止触发 ripple 和选中效果
-        menuBtn.addEventListener('click', (e) => e.stopPropagation());
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 关闭之前打开的下拉菜单
+            if (this.currentOpenDropdown && this.currentOpenDropdown !== dropdown) {
+                this.currentOpenDropdown.open = false;
+            }
+            // 更新当前打开的下拉菜单
+            this.currentOpenDropdown = dropdown;
+        });
         menuBtn.addEventListener('mousedown', (e) => e.stopPropagation());
         menuBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
         menuBtn.addEventListener('touchstart', (e) => e.stopPropagation());
         dropdown.appendChild(menuBtn);
+
+        // 监听下拉菜单关闭事件
+        dropdown.addEventListener('closed', () => {
+            if (this.currentOpenDropdown === dropdown) {
+                this.currentOpenDropdown = null;
+            }
+        });
 
         const menu = document.createElement('mdui-menu');
 
