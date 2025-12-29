@@ -371,18 +371,16 @@
   <mdui-fab id="service-fab" icon="play_arrow"></mdui-fab>
 
   <!-- 确认删除对话框 -->
-  <mdui-dialog id="confirm-dialog" close-on-esc close-on-overlay-click>
-    <mdui-card variant="elevated" style="margin: 0; box-shadow: none;">
-      <div style="padding: 24px 24px 16px;">
-        <h3 id="confirm-title" style="margin: 0 0 12px 0; font-size: 18px;">确认操作</h3>
-        <div id="confirm-message" style="color: var(--mdui-color-on-surface-variant); line-height: 1.6;">
-        </div>
+  <mdui-dialog id="confirm-dialog" close-on-esc close-on-overlay-click style="--mdui-dialog-max-width: 400px;">
+    <div style="padding: 12px 8px 8px;">
+      <h3 id="confirm-title" style="margin: 0 0 4px 0; font-size: 18px;">确认操作</h3>
+      <div id="confirm-message" style="color: var(--mdui-color-on-surface-variant); line-height: 1.6;">
       </div>
-      <mdui-card-actions align="end" style="padding: 8px 16px 16px;">
-        <mdui-button id="confirm-cancel-btn">取消</mdui-button>
-        <mdui-button id="confirm-ok-btn" variant="text" style="color: var(--mdui-color-error);">确定</mdui-button>
-      </mdui-card-actions>
-    </mdui-card>
+    </div>
+    <div style="padding: 0 12px 4px; display: flex; justify-content: flex-end;">
+      <mdui-button id="confirm-cancel-btn">取消</mdui-button>
+      <mdui-button id="confirm-ok-btn" variant="text" style="color: var(--mdui-color-error);">确定</mdui-button>
+    </div>
   </mdui-dialog>
 
 

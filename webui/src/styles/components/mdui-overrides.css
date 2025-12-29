@@ -77,6 +77,15 @@ mdui-button-icon {
   color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
 }
 
+/* 配置文件项中的更多按钮 - 扩大触发范围 */
+mdui-list-item.config-item mdui-dropdown[slot="end-icon"] mdui-button-icon {
+  position: relative;
+  padding: 12px;
+  margin: -12px;
+  min-width: 48px;
+  min-height: 48px;
+}
+
 /* ==================== 浮动操作按钮 FAB ==================== */
 
 mdui-fab {
@@ -134,6 +143,12 @@ mdui-dialog::part(panel) {
 /* 对话框 - 遮罩层保持半透明效果 */
 mdui-dialog::part(overlay) {
   background-color: rgba(0, 0, 0, 0.32) !important;
+}
+
+/* 确认对话框 - 限制宽度 */
+mdui-dialog#confirm-dialog::part(panel) {
+  max-width: 400px !important;
+  width: 90% !important;
 }
 
 /* ==================== 列表 ==================== */

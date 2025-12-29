@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang=zh-CN><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.483915c9.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.dc3f4c9f.css><body>
+<!DOCTYPE html><html lang=zh-CN><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.483915c9.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.13a9bc0f.css><body>
   
   <div id=fouc-overlay></div>
 
@@ -223,18 +223,16 @@
   <mdui-fab id=service-fab icon=play_arrow></mdui-fab>
 
   
-  <mdui-dialog id=confirm-dialog close-on-esc close-on-overlay-click>
-    <mdui-card variant=elevated style=box-shadow:none;margin:0>
-      <div style="padding:24px 24px 16px">
-        <h3 id=confirm-title style="margin:0 0 12px;font-size:18px">确认操作</h3>
-        <div id=confirm-message style=color:var(--mdui-color-on-surface-variant);line-height:1.6>
-        </div>
+  <mdui-dialog id=confirm-dialog close-on-esc close-on-overlay-click style=--mdui-dialog-max-width:400px>
+    <div style="padding:12px 8px 8px">
+      <h3 id=confirm-title style="margin:0 0 4px;font-size:18px">确认操作</h3>
+      <div id=confirm-message style=color:var(--mdui-color-on-surface-variant);line-height:1.6>
       </div>
-      <mdui-card-actions align=end style="padding:8px 16px 16px">
-        <mdui-button id=confirm-cancel-btn>取消</mdui-button>
-        <mdui-button id=confirm-ok-btn variant=text style=color:var(--mdui-color-error)>确定</mdui-button>
-      </mdui-card-actions>
-    </mdui-card>
+    </div>
+    <div style="justify-content:flex-end;padding:0 12px 4px;display:flex">
+      <mdui-button id=confirm-cancel-btn>取消</mdui-button>
+      <mdui-button id=confirm-ok-btn variant=text style=color:var(--mdui-color-error)>确定</mdui-button>
+    </div>
   </mdui-dialog>
 
 
@@ -289,6 +287,6 @@
     <mdui-button slot=action variant=text id=app-selector-cancel>取消</mdui-button>
   </mdui-dialog>
 
-  <script type=module src=/webui.1ceb183e.js></script>
+  <script type=module src=/webui.caefccd6.js></script>
 
 
