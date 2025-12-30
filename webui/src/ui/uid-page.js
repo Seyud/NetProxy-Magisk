@@ -283,13 +283,23 @@ export class UIDPageManager {
         }
     }
 
-    toggleAppSelection(app, checkbox) {
-        if (this.selectedApps.has(app.packageName)) {
-            this.selectedApps.delete(app.packageName);
-            checkbox.checked = false;
+    toggleAppSelection(app, checkbox, fromCheckbox = false) {
+        if (fromCheckbox) {
+            // 从复选框触发：复选框已经自动切换了状态，直接根据当前状态更新数据
+            if (checkbox.checked) {
+                this.selectedApps.set(app.packageName, app);
+            } else {
+                this.selectedApps.delete(app.packageName);
+            }
         } else {
-            this.selectedApps.set(app.packageName, app);
-            checkbox.checked = true;
+            // 从列表项触发：需要手动切换复选框状态
+            if (this.selectedApps.has(app.packageName)) {
+                this.selectedApps.delete(app.packageName);
+                checkbox.checked = false;
+            } else {
+                this.selectedApps.set(app.packageName, app);
+                checkbox.checked = true;
+            }
         }
         this.updateAddSelectedButton();
     }
@@ -418,10 +428,20 @@ export class UIDPageManager {
             checkbox.checked = this.selectedApps.has(app.packageName);
             item.appendChild(checkbox);
 
-            // 点击切换选中状态
-            item.addEventListener('click', (e) => {
+            // 复选框变化事件 - 阻止冒泡并同步选中状态
+            checkbox.addEventListener('change', (e) => {
                 e.stopPropagation();
-                this.toggleAppSelection(app, checkbox);
+                this.toggleAppSelection(app, checkbox, true);
+            });
+
+            // 点击整行切换选中状态（排除复选框区域）
+            item.addEventListener('click', (e) => {
+                // 如果点击的是复选框本身，不处理（让 change 事件处理）
+                if (e.target === checkbox || checkbox.contains(e.target)) {
+                    return;
+                }
+                e.stopPropagation();
+                this.toggleAppSelection(app, checkbox, false);
             });
 
             listEl.appendChild(item);
