@@ -7,8 +7,12 @@ import { toast } from '../utils/toast.js';
 export class ConfigPageManager {
     constructor(ui) {
         this.ui = ui;
-        this.expandedGroups = new Set(['默认分组']); // 默认展开的分组
-        this.currentOpenDropdown = null; // 当前打开的下拉菜单
+        this.expandedGroups = new Set(['默认分组']);
+        this.currentOpenDropdown = null;
+        // 缓存数据，避免重复加载
+        this._cachedGroups = null;
+        this._cachedCurrentConfig = null;
+        this._cachedConfigInfos = new Map(); // groupName -> Map<filename, info>
     }
 
     /**
@@ -47,31 +51,43 @@ export class ConfigPageManager {
         }
     }
 
+    // 刷新数据并渲染（首次加载或手动刷新时调用）
     async update() {
         try {
-            const listEl = document.getElementById('config-list');
+            // 加载数据并缓存
+            this._cachedGroups = await KSUService.getConfigGroups();
+            const { config } = await KSUService.getStatus();
+            this._cachedCurrentConfig = config;
+            this._cachedConfigInfos.clear();
 
-            const groups = await KSUService.getConfigGroups();
-            const { config: currentConfig } = await KSUService.getStatus();
+            // 预加载所有展开分组的配置信息
+            const loadPromises = this._cachedGroups
+                .filter(g => this.expandedGroups.has(g.name))
+                .map(async g => {
+                    const infos = await this.loadConfigInfos(g);
+                    this._cachedConfigInfos.set(g.name, infos);
+                });
+            await Promise.all(loadPromises);
 
-            if (groups.length === 0) {
-                listEl.innerHTML = '<mdui-list-item><div slot="headline">暂无配置文件</div></mdui-list-item>';
-                return;
-            }
-
-            // 先构建所有 DOM 元素到一个文档片段中
-            const fragment = document.createDocumentFragment();
-
-            for (const group of groups) {
-                await this.renderGroup(fragment, group, currentConfig);
-            }
-
-            // 所有内容准备好后，一次性替换
-            listEl.innerHTML = '';
-            listEl.appendChild(fragment);
+            this.render();
         } catch (error) {
-            console.error('Update config page failed:', error);
         }
+    }
+
+    // 仅渲染 UI（展开/收起时调用，使用缓存数据）
+    async render() {
+        const listEl = document.getElementById('config-list');
+        if (!this._cachedGroups || this._cachedGroups.length === 0) {
+            listEl.innerHTML = '<mdui-list-item><div slot="headline">暂无配置文件</div></mdui-list-item>';
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        for (const group of this._cachedGroups) {
+            await this.renderGroup(fragment, group, this._cachedCurrentConfig);
+        }
+        listEl.innerHTML = '';
+        listEl.appendChild(fragment);
     }
 
     async renderGroup(container, group, currentConfig) {
@@ -120,21 +136,15 @@ export class ConfigPageManager {
         }
 
         // 点击展开/收起
-        header.addEventListener('click', () => {
-            if (this.expandedGroups.has(group.name)) {
-                this.expandedGroups.delete(group.name);
-            } else {
-                this.expandedGroups.add(group.name);
-            }
-            this.update();
+        header.addEventListener('click', async () => {
+            await this.toggleGroup(group.name, group);
         });
 
         container.appendChild(header);
 
-        // 展开时显示节点列表
+        // 展开时显示节点列表（使用缓存）
         if (isExpanded) {
-            // 获取节点详情
-            const configInfos = await this.loadConfigInfos(group);
+            const configInfos = this._cachedConfigInfos.get(group.name) || new Map();
 
             for (const filename of group.configs) {
                 const info = configInfos.get(filename) || { protocol: 'unknown', address: '', port: '' };
@@ -146,20 +156,30 @@ export class ConfigPageManager {
         }
     }
 
-    async loadConfigInfos(group) {
-        const infoMap = new Map();
-
-        for (const filename of group.configs) {
-            try {
-                const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
-                const content = await KSUService.readConfig(fullPath);
-                infoMap.set(filename, this.parseOutboundInfo(content));
-            } catch (e) {
-                infoMap.set(filename, { protocol: 'unknown', address: '', port: '' });
+    // 切换分组展开/收起（懒加载 + 渲染）
+    async toggleGroup(groupName, group) {
+        if (this.expandedGroups.has(groupName)) {
+            // 收起：只需重新渲染
+            this.expandedGroups.delete(groupName);
+        } else {
+            // 展开：如果没有缓存，先加载
+            this.expandedGroups.add(groupName);
+            if (!this._cachedConfigInfos.has(groupName)) {
+                const infos = await this.loadConfigInfos(group);
+                this._cachedConfigInfos.set(groupName, infos);
             }
         }
+        this.render();
+    }
 
-        return infoMap;
+    async loadConfigInfos(group) {
+        // 构建完整路径列表
+        const filePaths = group.configs.map(f =>
+            group.dirName ? `${group.dirName}/${f}` : f
+        );
+
+        // 批量读取所有配置信息（单次 exec）
+        return await KSUService.batchReadConfigInfos(filePaths);
     }
 
     renderConfigItem(container, filename, fullPath, info, isCurrent, group) {

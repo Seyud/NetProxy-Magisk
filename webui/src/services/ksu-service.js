@@ -77,6 +77,44 @@ export class KSUService {
         return await this.exec(`cat '${this.MODULE_PATH}/config/xray/outbounds/${filename}'`);
     }
 
+    // 批量读取多个配置文件的基本信息（protocol, address, port）
+    static async batchReadConfigInfos(filePaths) {
+        if (!filePaths || filePaths.length === 0) return new Map();
+
+        const basePath = `${this.MODULE_PATH}/config/xray/outbounds`;
+        const files = filePaths.map(f => `"${basePath}/${f}"`).join(' ');
+
+        const result = await this.exec(`
+            for f in ${files}; do
+                echo "===FILE:$(basename $f)==="
+                head -30 "$f" 2>/dev/null | grep -E '"protocol"|"address"|"port"' | head -5
+            done
+        `);
+
+        if (!result) return new Map();
+
+        const infoMap = new Map();
+        const blocks = result.split('===FILE:').filter(b => b.trim());
+
+        for (const block of blocks) {
+            const lines = block.split('\n');
+            const filename = lines[0].replace('===', '').trim();
+            const content = lines.slice(1).join('\n');
+
+            let protocol = 'unknown', address = '', port = '';
+            const protocolMatch = content.match(/"protocol"\s*:\s*"([^"]+)"/);
+            if (protocolMatch) protocol = protocolMatch[1];
+            const addressMatch = content.match(/"address"\s*:\s*"([^"]+)"/);
+            if (addressMatch) address = addressMatch[1];
+            const portMatch = content.match(/"port"\s*:\s*(\d+)/);
+            if (portMatch) port = portMatch[1];
+
+            infoMap.set(filename, { protocol, address, port });
+        }
+
+        return infoMap;
+    }
+
     // 保存配置文件（到 outbounds 目录）
     static async saveConfig(filename, content) {
         const escaped = content.replace(/'/g, "'\\''");
