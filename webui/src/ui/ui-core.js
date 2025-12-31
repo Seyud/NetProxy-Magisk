@@ -30,7 +30,6 @@ export class UI {
     }
 
     init() {
-        console.log('Initializing UI...');
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 this.initializeMDUI();
@@ -39,28 +38,19 @@ export class UI {
             this.initializeMDUI();
         }
 
-        console.log('Step: setupNavigation');
         this.setupNavigation();
-        console.log('Step: setupFAB');
         this.setupFAB();
-        console.log('Step: setupThemeToggle');
         this.setupThemeToggle();
-        console.log('Step: setupDialogs');
         this.setupDialogs();
-        console.log('Step: setupAppSelector');
         this.setupAppSelector();
-        console.log('Step: uidPage.init');
         this.uidPage.init();
 
-        console.log('Step: calling updateAllPages()');
         try {
             this.updateAllPages();
-            console.log('updateAllPages() called successfully');
         } catch (error) {
             console.error('ERROR calling updateAllPages():', error);
         }
 
-        console.log('Step: setting up auto-refresh interval');
         setInterval(() => {
             const statusPage = document.getElementById('status-page');
             if (statusPage && statusPage.classList.contains('active')) {
@@ -68,38 +58,27 @@ export class UI {
             }
         }, 5000);
 
-        console.log('Step: setting up latency button');
         setTimeout(() => {
             const latencyBtn = document.getElementById('refresh-latency-btn');
             if (latencyBtn) {
                 latencyBtn.addEventListener('click', () => {
-                    console.log('Refreshing latency...');
                     latencyBtn.disabled = true;
                     latencyBtn.loading = true;
                     setTimeout(() => {
                         this.statusPage.refreshLatency();
                     }, 50);
                 });
-                console.log('Latency button bound successfully');
-            } else {
-                console.error('Latency button not found!');
             }
         }, 100);
-
-        console.log('=== init() completed ===');
     }
 
     initializeMDUI() {
-        console.log('Initializing MDUI components...');
         const requiredComponents = ['mdui-layout', 'mdui-top-app-bar', 'mdui-card', 'mdui-button'];
         requiredComponents.forEach(component => {
-            if (customElements.get(component)) {
-                console.log(`✅ Component ${component} is defined`);
-            } else {
+            if (!customElements.get(component)) {
                 console.warn(`⚠️ Component ${component} is not defined yet`);
             }
         });
-        console.log('MDUI components initialization check completed');
     }
 
     setupNavigation() {
@@ -145,7 +124,6 @@ export class UI {
     }
 
     setupFAB() {
-        console.log('Step: setupFAB');
         const fab = document.getElementById('service-fab');
 
         fab.addEventListener('click', async () => {
@@ -222,8 +200,6 @@ export class UI {
 
         // 同时调用MDUI的setTheme确保组件内部状态正确
         setTheme(theme);
-
-        console.log(`Theme applied: ${theme}, classes: ${html.className}`);
     }
 
     setupDialogs() {
@@ -343,37 +319,27 @@ export class UI {
     }
 
     setupAppSelector() {
-        console.log('>> setupAppSelector: START');
         try {
             const addAppBtn = document.getElementById('add-uid-btn');
-            console.log('   addAppBtn:', addAppBtn ? 'FOUND' : 'NOT FOUND');
 
             if (addAppBtn) {
                 addAppBtn.addEventListener('click', () => {
                     this.uidPage.showAppSelector();
                 });
             }
-
-            console.log('>> setupAppSelector: COMPLETED');
         } catch (error) {
             console.error('>> setupAppSelector: ERROR -', error);
         }
     }
 
     async confirm(message) {
-        console.log('=== confirm() START ===');
-        console.log('confirm called with message:', message);
-
         return new Promise((resolve) => {
-            console.log('Inside Promise executor');
-
             const dialog = document.getElementById('confirm-dialog');
             const messageEl = document.getElementById('confirm-message');
             const okBtn = document.getElementById('confirm-ok-btn');
             const cancelBtn = document.getElementById('confirm-cancel-btn');
 
             if (!dialog || !messageEl || !okBtn || !cancelBtn) {
-                console.error('Some dialog elements not found!');
                 resolve(false);
                 return;
             }
@@ -386,18 +352,15 @@ export class UI {
             cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
 
             newOkBtn.addEventListener('click', () => {
-                console.log('OK button clicked - User confirmed');
                 dialog.open = false;
                 resolve(true);
             });
 
             newCancelBtn.addEventListener('click', () => {
-                console.log('Cancel button clicked - User cancelled');
                 dialog.open = false;
                 resolve(false);
             });
 
-            console.log('Opening dialog...');
             dialog.open = true;
         });
     }
@@ -439,11 +402,8 @@ export class UI {
     }
 
     updateAllPages() {
-        console.log('=== updateAllPages() called ===');
         try {
-            console.log('Calling updateStatusPage...');
             this.statusPage.update();
-            console.log('updateStatusPage call completed (async)');
         } catch (error) {
             console.error('Error in updateAllPages:', error);
         }

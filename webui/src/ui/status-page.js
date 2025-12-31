@@ -11,24 +11,13 @@ export class StatusPageManager {
     }
 
     async update() {
-        console.log('=== updateStatusPage() async function started ===');
         try {
-            console.log('Step 1: Calling KSUService.getStatus()...');
             const { status, config } = await KSUService.getStatus();
-            console.log(`Step 2: Status received - status: "${status}", config: "${config}"`);
 
-            console.log('Step 3: Getting DOM elements...');
             const statusBadgeDot = document.getElementById('status-badge-dot');
             const statusBadgeText = document.getElementById('status-badge-text');
             const statusDetail = document.getElementById('status-detail');
             const statusChip = document.getElementById('status-chip-new');
-
-            console.log('Step 4: DOM elements found:', {
-                statusBadgeDot: !!statusBadgeDot,
-                statusBadgeText: !!statusBadgeText,
-                statusDetail: !!statusDetail,
-                statusChip: !!statusChip
-            });
 
             if (status === 'running') {
                 statusBadgeDot.className = 'status-badge-dot running';
@@ -38,18 +27,13 @@ export class StatusPageManager {
                 statusChip.style.background = '';
 
                 if (!this.uptimeInterval) {
-                    console.log('Fetching uptime from server...');
                     const uptime = await KSUService.getUptime();
-                    console.log('Received uptime:', uptime);
 
                     if (uptime && uptime !== '--' && uptime !== 'N/A' && !uptime.includes('failed')) {
                         this.startUptimeTimer(uptime);
                     } else {
-                        console.warn('Invalid uptime received, showing fallback message');
                         statusDetail.textContent = '运行时间获取失败';
                     }
-                } else {
-                    console.log('Uptime timer already running, skipping fetch');
                 }
                 statusDetail.style.display = '';
             } else {
@@ -90,29 +74,21 @@ export class StatusPageManager {
                 const uploadValue = speed.upload.replace(' KB/s', '').trim();
                 document.getElementById('download-new').textContent = `${downloadValue} KB/s`;
                 document.getElementById('upload-new').textContent = `${uploadValue} KB/s`;
-            }).catch(error => {
-                console.error('Failed to update network speed:', error);
-            });
+            }).catch(() => { });
 
             // 异步获取 Xray 版本号
             KSUService.getXrayVersion().then(version => {
                 document.getElementById('xray-version').textContent = version;
-            }).catch(error => {
-                console.error('Failed to get Xray version:', error);
+            }).catch(() => {
                 document.getElementById('xray-version').textContent = '--';
             });
-
-            console.log('updateStatusPage() completed successfully');
         } catch (error) {
             console.error('Update status failed:', error);
-            console.error('Error details:', error.message, error.stack);
         }
     }
 
     startUptimeTimer(uptimeString) {
-        console.log('startUptimeTimer called with:', uptimeString);
         const parts = uptimeString.split(/[-:]/);
-        console.log('Parsed parts:', parts);
 
         let totalSeconds = 0;
         if (parts.length === 4) {
@@ -124,7 +100,6 @@ export class StatusPageManager {
         }
 
         this.uptimeStartTime = Date.now() - (totalSeconds * 1000);
-        console.log('Calculated uptimeStartTime:', new Date(this.uptimeStartTime).toLocaleString());
 
         if (this.uptimeInterval) {
             clearInterval(this.uptimeInterval);
@@ -132,7 +107,6 @@ export class StatusPageManager {
 
         this.updateUptimeDisplay();
         this.uptimeInterval = setInterval(() => this.updateUptimeDisplay(), 1000);
-        console.log('Uptime timer started successfully');
     }
 
     stopUptimeTimer() {
@@ -166,8 +140,6 @@ export class StatusPageManager {
     }
 
     async refreshLatency() {
-        console.log('Starting latency detection...');
-
         const btn = document.getElementById('refresh-latency-btn');
         if (btn) {
             btn.disabled = true;
@@ -184,12 +156,9 @@ export class StatusPageManager {
             try {
                 const domain = site === 'baidu' ? 'baidu.com' :
                     site === 'google' ? '8.8.8.8' : 'github.com';
-                console.log(`Pinging ${site}...`);
                 const latency = await KSUService.getPingLatency(domain);
-                console.log(`${site} latency:`, latency);
                 this.updateLatencyHorizontal(site, latency);
             } catch (error) {
-                console.error(`Failed to get ${site} latency:`, error);
                 this.updateLatencyHorizontal(site, null);
             }
         });
@@ -200,8 +169,6 @@ export class StatusPageManager {
                 btn.loading = false;
             }
         }, 1000);
-
-        console.log('Latency detection initiated (non-blocking)');
     }
 
     updateLatencyHorizontal(site, latencyText) {

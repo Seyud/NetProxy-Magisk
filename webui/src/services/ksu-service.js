@@ -61,15 +61,11 @@ export class KSUService {
     }
 
     static async deleteConfig(filename) {
-        console.log('>>> KSUService.deleteConfig START, filename:', filename);
         try {
             const cmd = `su -c "rm '${this.MODULE_PATH}/config/xray/outbounds/${filename}'"`;
-            console.log('>>> Executing command:', cmd);
             await exec(cmd);
-            console.log('>>> Delete successful (no exception)');
             return { success: true };
         } catch (error) {
-            console.error('>>> deleteConfig exception:', error);
             return { success: false, error: error.message };
         }
     }
@@ -90,10 +86,8 @@ export class KSUService {
     // 从节点链接导入配置
     static async importFromNodeLink(nodeLink) {
         try {
-            console.log('Importing from node link...');
             const cmd = `su -c "${this.MODULE_PATH}/scripts/config/url2json.sh '${nodeLink}'"`;
             const result = await exec(cmd);
-            console.log('Import result:', result);
 
             if (result.errno === 0) {
                 return { success: true, output: result.stdout };
@@ -129,7 +123,7 @@ export class KSUService {
 
             if (result.errno === 0) {
                 const output = (result.stdout || '') + (result.stderr || '');
-                console.log('Update output:', output);
+
 
                 if (output.includes('已是最新版本') || output.includes('无需更新')) {
                     return { success: true, isLatest: true, message: '已是最新版本，无需更新', output };
@@ -422,26 +416,20 @@ export class KSUService {
     // 获取服务运行时间
     static async getUptime() {
         try {
-            console.log('getUptime: trying ps command...');
             const result = await exec(`ps -o etime= -C xray 2>/dev/null | head -1 | tr -d ' '`);
-            console.log('getUptime: method 1 - errno:', result.errno, 'stdout:', result.stdout);
 
             if (result.errno === 0 && result.stdout.trim()) {
                 return result.stdout.trim();
             }
 
-            console.log('getUptime: method 1 failed, trying fallback...');
             const fallback = await exec(`ps -eo etime,comm | grep xray | grep -v grep | head -1 | awk '{print $1}'`);
-            console.log('getUptime: method 2 - errno:', fallback.errno, 'stdout:', fallback.stdout);
 
             if (fallback.errno === 0 && fallback.stdout.trim()) {
                 return fallback.stdout.trim();
             }
 
-            console.warn('getUptime: both methods failed');
             return '--';
         } catch (error) {
-            console.error('getUptime: error -', error);
             return '--';
         }
     }
