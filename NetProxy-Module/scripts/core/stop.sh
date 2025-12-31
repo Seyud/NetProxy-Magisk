@@ -26,7 +26,7 @@ log() {
 #######################################
 kill_xray_process() {
     local pid
-    pid=$(pgrep -f "^$XRAY_BIN" | head -n 1)
+    pid=$(pidof -s "$XRAY_BIN")
     
     if [ -z "$pid" ]; then
         log "INFO" "未发现运行中的 Xray 进程"
