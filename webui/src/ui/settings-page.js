@@ -461,16 +461,6 @@ export class SettingsPageManager {
             modeGroup.addEventListener('change', (e) => {
                 const mode = e.target.value;
                 this.applyThemeMode(mode);
-                this.updateMonetSwitchState(mode);
-            });
-        }
-
-        // 莫奈取色开关
-        const monetSwitch = document.getElementById('monet-switch');
-        if (monetSwitch) {
-            monetSwitch.addEventListener('change', (e) => {
-                const enabled = e.target.checked;
-                this.applyMonetSetting(enabled);
             });
         }
 
@@ -491,7 +481,6 @@ export class SettingsPageManager {
     loadThemeSettings() {
         const savedTheme = localStorage.getItem('theme') || 'auto';
         const savedColor = localStorage.getItem('themeColor') || '#6750A4';
-        const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
 
         // 设置模式选择
         const modeGroup = document.getElementById('theme-mode-group');
@@ -499,20 +488,8 @@ export class SettingsPageManager {
             modeGroup.value = savedTheme;
         }
 
-        // 设置莫奈取色开关状态
-        const monetSwitch = document.getElementById('monet-switch');
-        if (monetSwitch) {
-            monetSwitch.checked = monetEnabled;
-        }
-
-        // 更新莫奈开关的可用状态
-        this.updateMonetSwitchState(savedTheme);
-
         // 设置颜色选择
         this.updateColorSelection(savedColor);
-
-        // 更新颜色选择面板的可见性
-        this.updateColorPaletteVisibility();
     }
 
     updateColorSelection(selectedColor) {
@@ -526,70 +503,6 @@ export class SettingsPageManager {
         });
     }
 
-    updateMonetSwitchState(mode) {
-        const monetSwitch = document.getElementById('monet-switch');
-        const monetDescription = document.getElementById('monet-description');
-
-        if (monetSwitch) {
-            // 莫奈取色仅在自动模式下可用
-            const isAutoMode = mode === 'auto';
-            monetSwitch.disabled = !isAutoMode;
-
-            if (monetDescription) {
-                if (isAutoMode) {
-                    monetDescription.textContent = '使用系统壁纸颜色作为主题色';
-                } else {
-                    monetDescription.textContent = '使用系统壁纸颜色作为主题色（仅自动模式可用）';
-                    // 非自动模式下，关闭莫奈取色
-                    monetSwitch.checked = false;
-                    localStorage.setItem('monetEnabled', 'false');
-                    // 移除 monet-enabled 类
-                    document.documentElement.classList.remove('monet-enabled');
-                    // 恢复手动主题色
-                    const savedColor = localStorage.getItem('themeColor');
-                    if (savedColor) {
-                        setColorScheme(savedColor);
-                    }
-                }
-            }
-        }
-
-        this.updateColorPaletteVisibility();
-    }
-
-    updateColorPaletteVisibility() {
-        const colorPaletteCard = document.getElementById('color-palette-card');
-        const monetSwitch = document.getElementById('monet-switch');
-        const savedTheme = localStorage.getItem('theme') || 'auto';
-
-        if (colorPaletteCard && monetSwitch) {
-            // 当莫奈取色启用且处于自动模式时，隐藏颜色选择面板
-            const shouldHide = monetSwitch.checked && savedTheme === 'auto';
-            colorPaletteCard.style.display = shouldHide ? 'none' : 'block';
-        }
-    }
-
-    applyMonetSetting(enabled) {
-        localStorage.setItem('monetEnabled', enabled.toString());
-
-        if (enabled) {
-            // 启用莫奈取色：添加 monet-enabled 类，让 monet.css 使用 KernelSU 变量
-            document.documentElement.classList.add('monet-enabled');
-            toast('已启用莫奈取色');
-        } else {
-            // 禁用莫奈取色：移除 monet-enabled 类
-            document.documentElement.classList.remove('monet-enabled');
-            // 恢复手动设置的主题色
-            const savedColor = localStorage.getItem('themeColor');
-            if (savedColor) {
-                setColorScheme(savedColor);
-            }
-            toast('已禁用莫奈取色');
-        }
-
-        this.updateColorPaletteVisibility();
-    }
-
     applyThemeMode(mode) {
         localStorage.setItem('theme', mode);
         setTheme(mode);
@@ -598,20 +511,6 @@ export class SettingsPageManager {
 
     applyThemeColor(color) {
         localStorage.setItem('themeColor', color);
-        // 用户手动选择颜色时，需要关闭莫奈取色以使手动颜色生效
-        const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
-        const savedTheme = localStorage.getItem('theme') || 'auto';
-        if (monetEnabled && savedTheme === 'auto') {
-            // 禁用莫奈取色，因为用户手动选择了颜色
-            localStorage.setItem('monetEnabled', 'false');
-            // 移除 monet-enabled 类
-            document.documentElement.classList.remove('monet-enabled');
-            const monetSwitch = document.getElementById('monet-switch');
-            if (monetSwitch) {
-                monetSwitch.checked = false;
-            }
-            this.updateColorPaletteVisibility();
-        }
         setColorScheme(color);
         toast('主题色已更改');
     }
@@ -620,19 +519,6 @@ export class SettingsPageManager {
         // 应用存储的主题模式
         const savedTheme = localStorage.getItem('theme') || 'auto';
         setTheme(savedTheme);
-
-        // 检查是否启用莫奈取色
-        const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
-
-        // 只有在自动模式且莫奈取色启用时，才添加 monet-enabled 类
-        if (savedTheme === 'auto' && monetEnabled) {
-            document.documentElement.classList.add('monet-enabled');
-            // 不设置颜色方案，让 monet.css 的变量生效
-            return;
-        } else {
-            // 确保移除 monet-enabled 类
-            document.documentElement.classList.remove('monet-enabled');
-        }
 
         // 应用存储的主题色
         const savedColor = localStorage.getItem('themeColor');
