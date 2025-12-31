@@ -1,12 +1,22 @@
 {
     "policy": {
         "levels": {
-            "8": {
-                "connIdle": 300,
-                "downlinkOnly": 1,
+            "0": {
                 "handshake": 4,
-                "uplinkOnly": 1
+                "connIdle": 300,
+                "uplinkOnly": 2,
+                "downlinkOnly": 5,
+                "statsUserUplink": false,
+                "statsUserDownlink": false,
+                "statsUserOnline": false,
+                "bufferSize": 4
             }
+        },
+        "system": {
+            "statsInboundUplink": false,
+            "statsInboundDownlink": false,
+            "statsOutboundUplink": false,
+            "statsOutboundDownlink": false
         }
     }
 }

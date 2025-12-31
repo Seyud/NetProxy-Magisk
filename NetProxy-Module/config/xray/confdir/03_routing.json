@@ -4,6 +4,14 @@
         "rules": [
             {
                 "type": "field",
+                "inboundTag": [
+                    "tproxy-in"
+                ],
+                "port": "53",
+                "outboundTag": "dns-out"
+            },
+            {
+                "type": "field",
                 "domain": [
                     "domain:googleapis.cn",
                     "domain:gstatic.com"

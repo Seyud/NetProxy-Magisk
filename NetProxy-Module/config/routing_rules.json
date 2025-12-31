@@ -1,5 +1,17 @@
 [
     {
+        "name": "DNS 劫持",
+        "type": "field",
+        "domain": "",
+        "ip": "",
+        "port": "53",
+        "protocol": "",
+        "network": "",
+        "inboundTag": "tproxy-in",
+        "outboundTag": "dns-out",
+        "enabled": true
+    },
+    {
         "name": "Google CN 走代理",
         "type": "field",
         "domain": "googleapis.cn,gstatic.com",

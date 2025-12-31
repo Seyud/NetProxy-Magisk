@@ -733,7 +733,7 @@ generate_outbound() {
                 "encryption": "$ENCRYPTION",
                 ${flow_field}
                 "id": "$UUID",
-                "level": 8
+                "level": 0
               }
             ]
           }
@@ -762,7 +762,7 @@ EOF
                 "id": "$UUID",
                 "security": "${SECURITY_METHOD:-auto}",
                 "alterId": 0,
-                "level": 8
+                "level": 0
               }
             ]
           }
@@ -790,7 +790,7 @@ EOF
             "port": $PORT,
             "ota": false,
             "password": "$PASSWORD",
-            "level": 8$(if [ -n "$FLOW" ]; then echo ",
+            "level": 0$(if [ -n "$FLOW" ]; then echo ",
             \"flow\": \"$FLOW\""; fi)
           }
         ]
@@ -815,7 +815,7 @@ EOF
             "port": $PORT,
             "method": "$SS_METHOD",
             "password": "$PASSWORD",
-            "level": 8
+            "level": 0
           }
         ]
       }
@@ -881,23 +881,7 @@ generate_outbounds_config() {
     cat > "$output_file" << EOF
 {
   "outbounds": [
-$(generate_outbound),
-    {
-      "protocol": "freedom",
-      "settings": {
-        "domainStrategy": "UseIP"
-      },
-      "tag": "direct"
-    },
-    {
-      "protocol": "blackhole",
-      "settings": {
-        "response": {
-          "type": "http"
-        }
-      },
-      "tag": "block"
-    }
+$(generate_outbound)
   ]
 }
 EOF

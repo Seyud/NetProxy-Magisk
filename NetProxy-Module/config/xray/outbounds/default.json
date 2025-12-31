@@ -2,18 +2,7 @@
     "outbounds": [
         {
             "tag": "proxy",
-            "protocol": "freedom",
-            "settings": {}
-        },
-        {
-            "tag": "direct",
-            "protocol": "freedom",
-            "settings": {}
-        },
-        {
-            "tag": "block",
-            "protocol": "blackhole",
-            "settings": {}
+            "protocol": "freedom"
         }
     ]
 }
