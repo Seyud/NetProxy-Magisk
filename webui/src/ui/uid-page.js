@@ -121,29 +121,8 @@ export class UIDPageManager {
                 return;
             }
 
-            // 获取所有应用信息以便匹配包名（这里只为了显示名字）
-            // 改进：失败时重试，且检查是否真的获取到了 appLabel
-            const fetchWithRetry = async (retries = 2) => {
-                for (let attempt = 0; attempt < retries; attempt++) {
-                    try {
-                        this.proxyApps = await KSUService.fetchAppDetails(this.proxyApps);
-                        // 检查是否至少有一个应用获取到了 appLabel
-                        const hasLabels = this.proxyApps.some(app => app.appLabel && app.appLabel !== app.packageName);
-                        if (hasLabels || attempt === retries - 1) {
-                            return;
-                        }
-                        // 没有获取到标签，等待后重试
-                        console.warn(`fetchAppDetails attempt ${attempt + 1}: no labels, retrying...`);
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                    } catch (e) {
-                        console.warn(`fetchAppDetails attempt ${attempt + 1} failed:`, e);
-                        if (attempt < retries - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 300));
-                        }
-                    }
-                }
-            };
-            await fetchWithRetry();
+            // 获取所有应用信息（Label, Icon）- 重试逻辑已内置于 fetchAppDetails
+            this.proxyApps = await KSUService.fetchAppDetails(this.proxyApps);
 
             // 列表显示时，如果有 cache 则显示 Label，否则显示 PackageName。
 

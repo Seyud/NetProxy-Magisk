@@ -672,12 +672,22 @@ export class KSUService {
         }
     }
 
-    // 获取应用详情（Label, Icon）
-    static async fetchAppDetails(apps) {
-        try {
-            const uniquePkgs = [...new Set(apps.map(a => a.packageName))];
-            if (uniquePkgs.length > 0) {
+    // 获取应用详情（Label, Icon），失败或返回空时自动重试
+    static async fetchAppDetails(apps, retries = 10) {
+        const uniquePkgs = [...new Set(apps.map(a => a.packageName))];
+        if (uniquePkgs.length === 0) return apps;
+
+        for (let attempt = 0; attempt < retries; attempt++) {
+            try {
                 const infos = await getPackagesInfo(uniquePkgs);
+
+                // 检查是否获取到有效数据
+                if (!infos || infos.length === 0) {
+                    console.warn(`fetchAppDetails attempt ${attempt + 1}: empty result, retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    continue;
+                }
+
                 const infoMap = new Map();
                 infos.forEach(i => infoMap.set(i.packageName, i));
 
@@ -688,9 +698,21 @@ export class KSUService {
                         app.icon = `ksu://icon/${app.packageName}`;
                     }
                 });
+
+                // 检查是否至少有一个应用获取到了 appLabel
+                const hasLabels = apps.some(app => app.appLabel && app.appLabel !== app.packageName);
+                if (hasLabels) {
+                    return apps; // 成功获取
+                }
+
+                console.warn(`fetchAppDetails attempt ${attempt + 1}: no labels populated, retrying...`);
+                await new Promise(resolve => setTimeout(resolve, 300));
+            } catch (e) {
+                console.warn(`fetchAppDetails attempt ${attempt + 1} failed:`, e);
+                if (attempt < retries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                }
             }
-        } catch (e) {
-            console.warn('fetchAppDetails: KSU API failed', e);
         }
 
         return apps;
