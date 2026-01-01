@@ -9,6 +9,10 @@ readonly MODULE_CONF="$MODDIR/config/module.conf"
 readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
 readonly CONFDIR="$MODDIR/config/xray/confdir"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
+# TProxy 配置文件
+readonly TPROXY_CONF="$MODDIR/config/tproxy.conf"
+# 运行时配置快照（启动时复制，停止时使用）
+readonly TPROXY_RUNTIME_CONF="$MODDIR/logs/.tproxy_runtime.conf"
 
 
 # 根据运行环境设置 busybox 路径
@@ -116,10 +120,12 @@ start_xray() {
         die "Xray 进程启动后立即退出，请检查配置" 1
     fi
     
+    # 复制 tproxy 配置快照（用于停止时正确清理）
+    log "INFO" "保存 TProxy 配置快照..."
+    cp -f "$TPROXY_CONF" "$TPROXY_RUNTIME_CONF"
+    
     # 启用 TProxy 规则
     "$MODDIR/scripts/network/tproxy.sh" start
-    
-
     
     log "INFO" "========== Xray 服务启动完成 =========="
 }

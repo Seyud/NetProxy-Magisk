@@ -6,6 +6,10 @@ readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly XRAY_BIN="$MODDIR/bin/xray"
 readonly KILL_TIMEOUT=5
+# 运行时配置快照（启动时复制的配置）
+readonly TPROXY_RUNTIME_CONF="$MODDIR/logs/.tproxy_runtime.conf"
+# 原始配置文件（备用）
+readonly TPROXY_CONF="$MODDIR/config/tproxy.conf"
 
 #######################################
 # 记录日志
@@ -60,7 +64,19 @@ kill_xray_process() {
 #######################################
 cleanup_tproxy() {
     log "INFO" "清理 TProxy 规则..."
-    "$MODDIR/scripts/network/tproxy.sh" stop || true
+    
+    # 优先使用运行时配置快照（启动时的配置），确保正确清理
+    if [ -f "$TPROXY_RUNTIME_CONF" ]; then
+        log "INFO" "使用运行时配置快照进行清理"
+        TPROXY_CONFIG="$TPROXY_RUNTIME_CONF" "$MODDIR/scripts/network/tproxy.sh" stop || true
+        # 清理完成后删除运行时配置
+        rm -f "$TPROXY_RUNTIME_CONF"
+        log "INFO" "运行时配置快照已删除"
+    else
+        log "WARN" "未找到运行时配置快照，使用当前配置"
+        "$MODDIR/scripts/network/tproxy.sh" stop || true
+    fi
+    
     log "INFO" "TProxy 规则清理完成"
 }
 
