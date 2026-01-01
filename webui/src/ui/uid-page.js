@@ -261,7 +261,9 @@ export class UIDPageManager {
             try {
                 await KSUService.removeProxyApp(packageName, userIdStr);
                 toast(`已移除`);
-                this.update();
+                // 清除缓存并强制刷新
+                this.proxyApps = [];
+                await this.update(true);
             } catch (error) {
                 toast('移除失败: ' + error.message, true);
             }
@@ -364,7 +366,9 @@ export class UIDPageManager {
 
         document.getElementById('app-selector-dialog').open = false;
         this.selectedApps.clear();
-        this.update();
+        // 清除缓存并强制刷新
+        this.proxyApps = [];
+        await this.update(true);
     }
 
     renderAppList(apps) {
