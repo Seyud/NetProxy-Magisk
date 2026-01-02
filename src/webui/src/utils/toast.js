@@ -15,8 +15,6 @@ export function toast(msg, closeable = false) {
         });
     } catch (error) {
         console.error('Toast error:', error);
-        // 备用方案：使用原生 alert
-        alert(msg);
     }
 }
 

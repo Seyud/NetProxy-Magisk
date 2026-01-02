@@ -561,3 +561,10 @@ mdui-switch[checked]::part(checked-icon) {
 mdui-divider {
   background-color: var(--monet-outline-variant, var(--mdui-color-outline-variant)) !important;
 }
+
+/* ==================== Snackbar/Toast 提示位置 ==================== */
+
+/* 将 snackbar 提升到底部导航栏上方 (底部导航栏高度约 80px) */
+mdui-snackbar[placement="bottom"] {
+  bottom: 88px !important;
+}
