@@ -882,6 +882,32 @@ export class SettingsPageManager {
     applyThemeMode(mode) {
         localStorage.setItem('theme', mode);
         setTheme(mode);
+
+        const savedColor = localStorage.getItem('themeColor') || '#6750A4';
+        const html = document.documentElement;
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (mode === 'light' || mode === 'dark') {
+            // 浅色或深色模式：使用用户选择的主题色
+            const forceDark = mode === 'dark';
+            this.applyAllMonetVariables(savedColor, forceDark);
+        } else {
+            // 自动模式：根据莫奈取色设置处理
+            const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
+            if (monetEnabled) {
+                // 莫奈取色开启：使用 KernelSU 注入的变量
+                html.classList.add('mdui-theme-auto');
+                html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
+                this.removeAllMonetVariables();
+                setColorScheme(savedColor);
+            } else {
+                // 莫奈取色关闭：使用用户选择的主题色
+                html.classList.remove('mdui-theme-auto');
+                html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
+                this.applyAllMonetVariables(savedColor, isDark);
+            }
+        }
+
         this.updateMonetToggleState();
         toast(`已切换到${mode === 'auto' ? '自动' : mode === 'light' ? '浅色' : '深色'}模式`);
     }
@@ -892,20 +918,152 @@ export class SettingsPageManager {
         const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
         const savedTheme = localStorage.getItem('theme') || 'auto';
         const isAutoMode = savedTheme === 'auto';
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-        if (isAutoMode && !monetEnabled) {
-            const root = document.documentElement;
-            root.style.setProperty('--monet-primary', color);
-            root.style.setProperty('--monet-primary-container', color + '30');
-            root.style.setProperty('--monet-on-primary', '#ffffff');
-            root.style.setProperty('--monet-on-primary-container', color);
-            root.style.setProperty('--monet-secondary-container', color + '30');
-            root.style.setProperty('--monet-on-secondary-container', color);
+        // 非自动模式（浅色/深色），或者自动模式下莫奈取色关闭时，设置所有主题变量
+        if (!isAutoMode) {
+            const forceDark = savedTheme === 'dark';
+            this.applyAllMonetVariables(color, forceDark);
+        } else if (!monetEnabled) {
+            this.applyAllMonetVariables(color, isDark);
+        } else {
+            // 自动模式 + 莫奈取色开启：只更新 MDUI 的颜色方案
+            setColorScheme(color);
         }
 
-        setColorScheme(color);
         this.updateMonetToggleState();
         toast('主题色已更改');
+    }
+
+    /**
+     * 设置所有 Monet 主题变量（使用 MDUI 生成的值覆盖 monet.css 中的默认值）
+     * @param {string} primaryColor - 主题主色调
+     * @param {boolean} isDark - 是否为深色模式
+     */
+    applyAllMonetVariables(primaryColor, isDark) {
+        const html = document.documentElement;
+        
+        // 调用 setColorScheme 让 MDUI 组件内部使用正确的颜色
+        setColorScheme(primaryColor);
+        
+        // 解析主题色为 RGB
+        const hexToRgb = (hex) => {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : { r: 103, g: 80, b: 164 }; // 默认紫色
+        };
+        
+        // 混合两个颜色
+        const mixColors = (color1, color2, weight) => {
+            return {
+                r: Math.round(color1.r * weight + color2.r * (1 - weight)),
+                g: Math.round(color1.g * weight + color2.g * (1 - weight)),
+                b: Math.round(color1.b * weight + color2.b * (1 - weight))
+            };
+        };
+        
+        // RGB 转 Hex
+        const rgbToHex = (rgb) => {
+            return '#' + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join('');
+        };
+        
+        const primary = hexToRgb(primaryColor);
+        
+        // 设置 primary 相关变量（用户选择的主题色）
+        html.style.setProperty('--monet-primary', primaryColor);
+        html.style.setProperty('--monet-primary-container', primaryColor + '30');
+        html.style.setProperty('--monet-on-primary', '#ffffff');
+        html.style.setProperty('--monet-on-primary-container', primaryColor);
+        html.style.setProperty('--monet-secondary-container', primaryColor + '30');
+        html.style.setProperty('--monet-on-secondary-container', primaryColor);
+        
+        // 根据主题色生成 surface 颜色（Material 3 风格）
+        if (isDark) {
+            // 深色模式：使用深灰色基底，轻微混入主题色
+            const darkBase = { r: 20, g: 18, b: 24 };      // #141218
+            const darkMid = { r: 33, g: 31, b: 38 };       // #211f26
+            const darkHigh = { r: 43, g: 41, b: 48 };      // #2b2930
+            const darkHighest = { r: 54, g: 52, b: 59 };   // #36343b
+            
+            // 混入约 5% 的主题色，使 surface 带有主题色调
+            const surface = mixColors(primary, darkBase, 0.05);
+            const surfaceContainer = mixColors(primary, darkMid, 0.05);
+            const surfaceContainerLow = mixColors(primary, { r: 29, g: 27, b: 32 }, 0.05);
+            const surfaceContainerHigh = mixColors(primary, darkHigh, 0.05);
+            const surfaceContainerHighest = mixColors(primary, darkHighest, 0.05);
+            
+            html.style.setProperty('--monet-surface', rgbToHex(surface));
+            html.style.setProperty('--monet-on-surface', '#e6e0e9');
+            html.style.setProperty('--monet-surface-variant', '#49454f');
+            html.style.setProperty('--monet-on-surface-variant', '#cac4d0');
+            html.style.setProperty('--monet-surface-container', rgbToHex(surfaceContainer));
+            html.style.setProperty('--monet-surface-container-low', rgbToHex(surfaceContainerLow));
+            html.style.setProperty('--monet-surface-container-high', rgbToHex(surfaceContainerHigh));
+            html.style.setProperty('--monet-surface-container-highest', rgbToHex(surfaceContainerHighest));
+            html.style.setProperty('--monet-background', rgbToHex(surface));
+            html.style.setProperty('--monet-on-background', '#e6e0e9');
+            html.style.setProperty('--monet-outline', '#938f99');
+            html.style.setProperty('--monet-outline-variant', '#49454f');
+            html.style.setProperty('--monet-secondary', '#ccc2dc');
+            html.style.setProperty('--monet-on-secondary', '#332d41');
+        } else {
+            // 浅色模式：使用白色基底，轻微混入主题色
+            const white = { r: 255, g: 255, b: 255 };
+            const lightBase = { r: 254, g: 247, b: 255 };  // 非常浅的基底
+            
+            // 混入约 3-8% 的主题色，使 surface 带有主题色调
+            const surface = mixColors(primary, white, 0.03);
+            const surfaceContainerLowest = mixColors(primary, white, 0.02);
+            const surfaceContainerLow = mixColors(primary, white, 0.04);
+            const surfaceContainer = mixColors(primary, white, 0.06);
+            const surfaceContainerHigh = mixColors(primary, white, 0.08);
+            const surfaceContainerHighest = mixColors(primary, white, 0.10);
+            
+            html.style.setProperty('--monet-surface', rgbToHex(surface));
+            html.style.setProperty('--monet-on-surface', '#1d1b20');
+            html.style.setProperty('--monet-surface-variant', rgbToHex(mixColors(primary, { r: 231, g: 224, b: 236 }, 0.15)));
+            html.style.setProperty('--monet-on-surface-variant', '#49454f');
+            html.style.setProperty('--monet-surface-container', rgbToHex(surfaceContainer));
+            html.style.setProperty('--monet-surface-container-low', rgbToHex(surfaceContainerLow));
+            html.style.setProperty('--monet-surface-container-high', rgbToHex(surfaceContainerHigh));
+            html.style.setProperty('--monet-surface-container-highest', rgbToHex(surfaceContainerHighest));
+            html.style.setProperty('--monet-background', rgbToHex(surface));
+            html.style.setProperty('--monet-on-background', '#1d1b20');
+            html.style.setProperty('--monet-outline', '#79747e');
+            html.style.setProperty('--monet-outline-variant', rgbToHex(mixColors(primary, { r: 202, g: 196, b: 208 }, 0.10)));
+            html.style.setProperty('--monet-secondary', rgbToHex(mixColors(primary, { r: 98, g: 91, b: 113 }, 0.20)));
+            html.style.setProperty('--monet-on-secondary', '#ffffff');
+        }
+    }
+
+    /**
+     * 移除所有内联设置的 Monet 变量
+     */
+    removeAllMonetVariables() {
+        const html = document.documentElement;
+        html.style.removeProperty('--monet-primary');
+        html.style.removeProperty('--monet-primary-container');
+        html.style.removeProperty('--monet-on-primary');
+        html.style.removeProperty('--monet-on-primary-container');
+        html.style.removeProperty('--monet-secondary');
+        html.style.removeProperty('--monet-on-secondary');
+        html.style.removeProperty('--monet-secondary-container');
+        html.style.removeProperty('--monet-on-secondary-container');
+        html.style.removeProperty('--monet-surface');
+        html.style.removeProperty('--monet-on-surface');
+        html.style.removeProperty('--monet-surface-variant');
+        html.style.removeProperty('--monet-on-surface-variant');
+        html.style.removeProperty('--monet-surface-container');
+        html.style.removeProperty('--monet-surface-container-low');
+        html.style.removeProperty('--monet-surface-container-high');
+        html.style.removeProperty('--monet-surface-container-highest');
+        html.style.removeProperty('--monet-background');
+        html.style.removeProperty('--monet-on-background');
+        html.style.removeProperty('--monet-outline');
+        html.style.removeProperty('--monet-outline-variant');
     }
 
     applyStoredTheme() {
@@ -914,10 +1072,8 @@ export class SettingsPageManager {
         setTheme(savedTheme);
 
         // 应用存储的主题色
-        const savedColor = localStorage.getItem('themeColor');
-        if (savedColor) {
-            setColorScheme(savedColor);
-        }
+        const savedColor = localStorage.getItem('themeColor') || '#6750A4';
+        setColorScheme(savedColor);
 
         // 应用莫奈取色设置
         const savedMonet = localStorage.getItem('monetEnabled');
@@ -925,21 +1081,19 @@ export class SettingsPageManager {
         const html = document.documentElement;
 
         if (savedMonet === 'true' && savedTheme === 'auto') {
+            // 自动模式 + 莫奈取色开启：使用 KernelSU 注入的变量
             html.classList.add('mdui-theme-auto');
             html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
+            this.removeAllMonetVariables();
         } else if (savedTheme === 'auto') {
+            // 自动模式 + 莫奈取色关闭：使用用户选择的主题色
             html.classList.remove('mdui-theme-auto');
             html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
-
-            // 自动模式 + 莫奈取色关闭：手动设置 Monet 变量以应用用户选择的主题色
-            if (savedColor) {
-                html.style.setProperty('--monet-primary', savedColor);
-                html.style.setProperty('--monet-primary-container', savedColor + '30');
-                html.style.setProperty('--monet-on-primary', '#ffffff');
-                html.style.setProperty('--monet-on-primary-container', savedColor);
-                html.style.setProperty('--monet-secondary-container', savedColor + '30');
-                html.style.setProperty('--monet-on-secondary-container', savedColor);
-            }
+            this.applyAllMonetVariables(savedColor, isDark);
+        } else {
+            // 浅色或深色模式：使用用户选择的主题色
+            const forceDark = savedTheme === 'dark';
+            this.applyAllMonetVariables(savedColor, forceDark);
         }
     }
 
@@ -968,7 +1122,8 @@ export class SettingsPageManager {
                 } else {
                     monetToggle.checked = true;
                 }
-                this.applyMonetSetting(monetToggle.checked);
+                // 注意：不在这里调用 applyMonetSetting()
+                // 该方法只用于更新 UI 状态，实际的主题应用在初始化时已完成
             } else {
                 monetToggle.disabled = true;
                 monetToggle.checked = false;
@@ -984,23 +1139,14 @@ export class SettingsPageManager {
         if (enabled) {
             html.classList.add('mdui-theme-auto');
             html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
-            html.style.removeProperty('--monet-primary');
-            html.style.removeProperty('--monet-primary-container');
-            html.style.removeProperty('--monet-on-primary');
-            html.style.removeProperty('--monet-on-primary-container');
-            html.style.removeProperty('--monet-secondary-container');
-            html.style.removeProperty('--monet-on-secondary-container');
+            // 移除所有内联设置的 monet 变量，让 CSS 使用 monet.css 中定义的规则
+            this.removeAllMonetVariables();
             setColorScheme(savedColor);
         } else {
             html.classList.remove('mdui-theme-auto');
             html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
-            html.style.setProperty('--monet-primary', savedColor);
-            html.style.setProperty('--monet-primary-container', savedColor + '30');
-            html.style.setProperty('--monet-on-primary', '#ffffff');
-            html.style.setProperty('--monet-on-primary-container', savedColor);
-            html.style.setProperty('--monet-secondary-container', savedColor + '30');
-            html.style.setProperty('--monet-on-secondary-container', savedColor);
-            setColorScheme(savedColor);
+            // 设置所有 monet 变量，使用 MDUI 生成的值覆盖 monet.css 的默认值
+            this.applyAllMonetVariables(savedColor, isDark);
         }
     }
 
