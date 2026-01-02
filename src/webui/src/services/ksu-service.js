@@ -1,5 +1,4 @@
-import { exec, listPackages, getPackagesInfo } from 'kernelsu';
-import { wrapInputStream } from 'webuix';
+import { exec, getPackagesInfo } from 'kernelsu';
 import { toast } from '../utils/toast.js';
 
 /**
