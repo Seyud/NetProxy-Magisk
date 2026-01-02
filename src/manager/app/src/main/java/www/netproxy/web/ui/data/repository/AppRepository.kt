@@ -17,10 +17,17 @@ import kotlin.coroutines.suspendCoroutine
 
 /**
  * 应用列表仓库
+ * 
+ * 负责获取设备上所有已安装应用的信息，通过 Root 权限获取跨用户的应用列表
  */
 object AppRepository {
+    /** 应用列表缓存 */
     private var cachedApps: List<AppInfo>? = null
 
+    /**
+     * 获取已缓存的应用列表
+     * @return 应用列表，未加载时返回空列表
+     */
     fun getApplist(): List<AppInfo> {
         return cachedApps ?: emptyList()
     }
@@ -31,8 +38,8 @@ object AppRepository {
 
         val (binder, _) = result
         try {
-            val rootService = IKsuWebuiStandaloneInterface.Stub.asInterface(binder)
-            val slice = rootService.getPackages(PackageManager.GET_META_DATA)
+            val rootService = IKsuWebuiStandaloneInterface.Stub.asInterface(binder) ?: return emptyList()
+            val slice = rootService.getPackages(PackageManager.GET_META_DATA) ?: return emptyList()
             val packages = slice.list
             val pm = context.packageManager
             val apps = packages.map { pkg ->

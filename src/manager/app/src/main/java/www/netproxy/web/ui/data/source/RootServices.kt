@@ -8,6 +8,12 @@ import android.util.Log
 import com.topjohnwu.superuser.ipc.RootService
 import rikka.parcelablelist.ParcelableListSlice
 
+/**
+ * Root 权限服务
+ * 
+ * 以 Root 权限运行，用于获取所有用户的已安装应用列表
+ * 通过反射调用隐藏 API getInstalledPackagesAsUser 实现跨用户查询
+ */
 class RootServices : RootService() {
     private val TAG = "RootServices"
 
@@ -34,6 +40,7 @@ class RootServices : RootService() {
         return packages
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun getInstalledPackagesAsUser(flags: Int, userId: Int): List<PackageInfo> {
         return try {
             val pm = packageManager

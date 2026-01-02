@@ -25,6 +25,20 @@ import java.io.File
 import java.util.concurrent.CompletableFuture
 import android.text.TextUtils
 
+/**
+ * WebView JavaScript 接口
+ * 
+ * 为 WebUI 提供原生功能调用能力，包括：
+ * - Shell 命令执行 (exec, spawn)
+ * - Toast 提示显示
+ * - 全屏控制
+ * - 应用列表查询
+ * - 模块信息获取
+ * 
+ * @param context 上下文
+ * @param webView WebView 实例
+ * @param modDir 模块目录路径
+ */
 class WebViewInterface(
     val context: Context,
     private val webView: WebView,

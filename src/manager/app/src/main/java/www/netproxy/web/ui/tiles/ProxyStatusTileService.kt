@@ -5,11 +5,21 @@ import android.service.quicksettings.TileService
 import com.topjohnwu.superuser.Shell
 import www.netproxy.web.ui.R
 
+/**
+ * 代理状态快捷设置磁贴
+ * 
+ * 智能显示代理运行状态，点击可切换开关：
+ * - 运行中 → 点击停止
+ * - 已停止 → 点击启动
+ */
 class ProxyStatusTileService : TileService() {
     
     companion object {
+        /** Xray 可执行文件路径 */
         private const val XRAY_BIN = "/data/adb/modules/netproxy/bin/xray"
+        /** 启动脚本路径 */
         private const val START_SCRIPT = "/data/adb/modules/netproxy/scripts/core/start.sh"
+        /** 停止脚本路径 */
         private const val STOP_SCRIPT = "/data/adb/modules/netproxy/scripts/core/stop.sh"
     }
     

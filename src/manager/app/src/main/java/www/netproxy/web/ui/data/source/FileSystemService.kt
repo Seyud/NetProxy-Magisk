@@ -11,13 +11,24 @@ import com.topjohnwu.superuser.nio.FileSystemManager
 import www.netproxy.web.ui.App
 import java.util.concurrent.CopyOnWriteArraySet
 
+/**
+ * 文件系统服务
+ * 
+ * 以 Root 权限运行，提供对设备文件系统的访问能力
+ * 用于读取模块目录下的 WebUI 资源文件
+ */
 class FileSystemService : RootService() {
     override fun onBind(intent: Intent): IBinder {
         return FileSystemManager.getService()
     }
 
+    /**
+     * 服务状态监听器接口
+     */
     interface Listener {
+        /** 服务可用时回调 */
         fun onServiceAvailable(fs: FileSystemManager)
+        /** 启动失败时回调（无 Root 权限） */
         fun onLaunchFailed()
     }
 

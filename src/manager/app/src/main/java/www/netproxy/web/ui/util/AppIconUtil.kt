@@ -10,8 +10,15 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
 import www.netproxy.web.ui.data.repository.AppRepository
 
+/**
+ * 应用图标工具类
+ * 
+ * 提供应用图标的加载和缓存功能，用于 WebView 中显示应用图标
+ */
 object AppIconUtil {
+    /** 图标缓存大小限制 */
     private const val CACHE_SIZE = 200
+    /** 图标 LRU 缓存 */
     private val iconCache = LruCache<String?, Bitmap?>(CACHE_SIZE)
 
     fun getAppIconDrawable(context: Context, packageName: String): Drawable? {
