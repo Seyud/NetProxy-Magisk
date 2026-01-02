@@ -716,7 +716,10 @@ export class ConfigPageManager {
             const result = await KSUService.deleteConfig(fullPath);
             if (result && result.success) {
                 toast('配置已删除');
-                this.update();
+                // 强制刷新配置列表
+                this._cachedGroups = null;
+                this._cachedConfigInfos.clear();
+                await this.update(true);
             } else {
                 toast('删除失败: ' + (result?.error || '未知错误'));
             }
@@ -909,14 +912,16 @@ export class ConfigPageManager {
         }
 
         try {
-            toast('正在导入节点...');
             const result = await KSUService.importFromNodeLink(nodeLink);
 
             if (result.success) {
                 toast('节点导入成功');
                 document.getElementById('node-link-dialog').open = false;
                 input.value = '';
-                this.update();
+                // 强制刷新配置列表
+                this._cachedGroups = null;
+                this._cachedConfigInfos.clear();
+                await this.update(true);
             } else {
                 toast('导入失败: ' + (result.error || '未知错误'));
             }
