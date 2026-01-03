@@ -177,6 +177,7 @@ export class UI {
 
         themeBtn.addEventListener('click', () => {
             const themes = ['light', 'dark', 'auto'];
+            const currentIndex = themes.indexOf(this.currentTheme);
             this.currentTheme = themes[(currentIndex + 1) % themes.length];
             localStorage.setItem('theme', this.currentTheme);
             this.applyTheme(this.currentTheme);
