@@ -4,7 +4,7 @@ set -e
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly BIN_DIR="$MODDIR/bin"
 readonly TEMP_DIR="$BIN_DIR/.tmp"
-readonly LOG_FILE="$MODDIR/logs/update.log"
+readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly REPO="XTLS/Xray-core"
 readonly ARCH="android-arm64-v8a"
 readonly MIRROR="https://ghfast.top/?q="

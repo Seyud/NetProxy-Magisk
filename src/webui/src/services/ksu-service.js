@@ -557,13 +557,7 @@ EOF
         }
     }
 
-    static async getUpdateLog(lines = 100) {
-        try {
-            return await this.exec(`tail -n ${lines} ${this.MODULE_PATH}/logs/update.log`);
-        } catch (error) {
-            return '暂无日志';
-        }
-    }
+
 
     // 获取服务运行时间
     static async getUptime() {

@@ -28,7 +28,6 @@ export class LogsPageManager {
         await this.loadServiceLog();
         await this.loadXrayLog();
         await this.loadTproxyLog();
-        await this.loadUpdateLog();
     }
 
     async loadServiceLog() {
@@ -58,14 +57,7 @@ export class LogsPageManager {
         }
     }
 
-    async loadUpdateLog() {
-        try {
-            const log = await KSUService.getUpdateLog();
-            document.getElementById('update-log').textContent = log;
-        } catch (error) {
-            document.getElementById('update-log').textContent = '加载失败';
-        }
-    }
+
 
     async exportLogs() {
         const btn = document.getElementById('export-logs-btn');

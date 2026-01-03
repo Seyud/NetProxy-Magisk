@@ -267,13 +267,7 @@ export class UI {
             });
         }
 
-        const updateLogBtn = document.getElementById('refresh-update-log');
-        if (updateLogBtn) {
-            updateLogBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.logsPage.loadUpdateLog();
-            });
-        }
+
 
         const checkUpdateBtn = document.getElementById('check-update-btn');
         if (checkUpdateBtn) {
