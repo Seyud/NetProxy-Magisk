@@ -640,18 +640,14 @@ export class ConfigPageManager {
 
         const toastId = toast(`开始测试 ${total} 个节点...`, 0); // 持续显示
 
-        // 并发控制，每次 5 个
-        const concurrency = 5;
-        for (let i = 0; i < total; i += concurrency) {
-            const chunk = items.slice(i, i + concurrency);
-            await Promise.all(chunk.map(async (item) => {
-                const filename = item.dataset.filename;
-                const info = this._cachedConfigInfos.get(groupName)?.get(filename);
-                if (info && info.address) {
-                    await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
-                }
-            }));
-        }
+        // 无限制并发，同时测试所有节点
+        await Promise.all(items.map(async (item) => {
+            const filename = item.dataset.filename;
+            const info = this._cachedConfigInfos.get(groupName)?.get(filename);
+            if (info && info.address) {
+                await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
+            }
+        }));
 
         // 关闭 toast (重新显示一个自动消失的)
         // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
