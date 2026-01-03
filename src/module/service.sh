@@ -92,8 +92,46 @@ check_device_specific() {
 # 确保日志目录存在
 mkdir -p "$MODDIR/logs"
 
+#######################################
+# 记录环境信息
+#######################################
+log_env_info() {
+    log "INFO" "========== 环境信息检测 =========="
+    
+    # KernelSU
+    if [ "$KSU" = "true" ]; then
+        log "INFO" "环境: KernelSU"
+        log "INFO" "KSU_VER: ${KSU_VER:-unknown}"
+        log "INFO" "KSU_VER_CODE: ${KSU_VER_CODE:-unknown}"
+        log "INFO" "KSU_KERNEL_VER_CODE: ${KSU_KERNEL_VER_CODE:-unknown}"
+    fi
+
+    # APatch
+    if [ "$APATCH" = "true" ] || [ "$KERNELPATCH" = "true" ]; then
+        log "INFO" "环境: APatch / KernelPatch"
+        log "INFO" "APATCH_VER: ${APATCH_VER:-unknown}"
+        log "INFO" "APATCH_VER_CODE: ${APATCH_VER_CODE:-unknown}"
+        log "INFO" "KERNEL_VERSION: ${KERNEL_VERSION:-unknown}"
+        log "INFO" "KERNELPATCH_VERSION: ${KERNELPATCH_VERSION:-unknown}"
+    fi
+
+    # Magisk
+    if [ -n "$MAGISK_VER" ]; then
+        log "INFO" "环境: Magisk"
+        log "INFO" "MAGISK_VER: $MAGISK_VER"
+        log "INFO" "MAGISK_VER_CODE: $MAGISK_VER_CODE"
+    fi
+
+    # Common
+    log "INFO" "IS64BIT: ${IS64BIT:-unknown}"
+    log "INFO" "API: ${API:-unknown}"
+    
+    log "INFO" "=================================="
+}
+
 # 主流程
 log "INFO" "========== NetProxy 服务启动 =========="
+log_env_info
 load_module_config
 
 if wait_for_boot; then
