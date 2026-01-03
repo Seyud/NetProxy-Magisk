@@ -160,7 +160,7 @@ export class ConfigPageManager {
     updateItemUI(item, info) {
         // 更新协议
         const protocolLine = item.querySelector('.protocol-line');
-        if (protocolLine) protocolLine.textContent = info.protocol || '未知协议';
+        if (protocolLine) protocolLine.textContent = (info.protocol || '未知协议').toUpperCase();
 
         // 更新地址
         const addressSpan = item.querySelector('.address-span');
@@ -442,20 +442,34 @@ export class ConfigPageManager {
         descContainer.slot = 'description';
         descContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; width: 100%;';
 
-        const protocolLine = document.createElement('div');
-        protocolLine.className = 'protocol-line'; // 添加类名方便更新
-        protocolLine.style.cssText = 'color: var(--mdui-color-primary); font-size: 12px;';
-        protocolLine.textContent = info ? (info.protocol || '未知协议') : 'loading...';
-        descContainer.appendChild(protocolLine);
-
+        // 1. IP地址+端口 (第二行)
         const addressLine = document.createElement('div');
         addressLine.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 
         const addressSpan = document.createElement('span');
-        addressSpan.className = 'address-span'; // 添加类名方便更新
-        addressSpan.style.cssText = 'color: var(--mdui-color-on-surface-variant); font-size: 12px;';
+        addressSpan.className = 'address-span';
+        addressSpan.style.cssText = 'color: var(--mdui-color-on-surface-variant); font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 8px;';
         addressSpan.textContent = info ? (info.port ? `${info.address}:${info.port}` : info.address) : '';
         addressLine.appendChild(addressSpan);
+        descContainer.appendChild(addressLine);
+
+        // 2. 协议 (第三行) - 包含协议名和当前状态
+        const protocolLine = document.createElement('div');
+        protocolLine.style.cssText = 'color: var(--mdui-color-primary); font-size: 12px; font-weight: 500; margin-top: 2px; display: flex; align-items: center; gap: 8px;';
+
+        const protocolText = document.createElement('span');
+        protocolText.className = 'protocol-line';
+        protocolText.textContent = info ? (info.protocol || '未知协议').toUpperCase() : 'LOADING...';
+        protocolLine.appendChild(protocolText);
+
+        if (isCurrent) {
+            const currentTag = document.createElement('span');
+            currentTag.textContent = '当前';
+            currentTag.style.cssText = 'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary); color: var(--mdui-color-on-surface-variant);';
+            protocolLine.appendChild(currentTag);
+        }
+
+        descContainer.appendChild(protocolLine);
 
         // 如果没有 info，加入 Observer
         if (!info) {
@@ -467,19 +481,14 @@ export class ConfigPageManager {
 
         const latencyLabel = document.createElement('span');
         latencyLabel.className = 'latency-label';
-        // ... (rest same) ...
         latencyLabel.style.cssText = 'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
+
         statusContainer.appendChild(latencyLabel);
 
-        if (isCurrent) {
-            const currentTag = document.createElement('span');
-            currentTag.textContent = '当前';
-            currentTag.style.cssText = 'font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--mdui-color-primary); color: var(--mdui-color-on-primary);';
-            statusContainer.appendChild(currentTag);
-        }
+
 
         addressLine.appendChild(statusContainer);
-        descContainer.appendChild(addressLine);
+
         item.appendChild(descContainer);
 
         // 三点菜单
