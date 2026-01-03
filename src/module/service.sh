@@ -122,10 +122,15 @@ log_env_info() {
         log "INFO" "MAGISK_VER_CODE: $MAGISK_VER_CODE"
     fi
 
-    # Common
-    log "INFO" "IS64BIT: ${IS64BIT:-unknown}"
-    log "INFO" "API: ${API:-unknown}"
-    
+    # Module Info
+    if [ -f "$MODDIR/module.prop" ]; then
+        local version=$(grep "^version=" "$MODDIR/module.prop" | cut -d= -f2)
+        local versionCode=$(grep "^versionCode=" "$MODDIR/module.prop" | cut -d= -f2)
+        log "INFO" "VERSION: ${version:-unknown}"
+        log "INFO" "VERSION_CODE: ${versionCode:-unknown}"
+    fi
+
+
     log "INFO" "=================================="
 }
 
