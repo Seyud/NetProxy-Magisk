@@ -63,28 +63,16 @@ wait_for_boot() {
 }
 
 #######################################
-# 检测设备并执行特定脚本
+# 执行设备特定修复脚本
 #######################################
 check_device_specific() {
-    # 检查是否启用 OnePlus A16 修复
-    if [ "$ONEPLUS_A16_FIX" != "1" ]; then
-        log "INFO" "OnePlus A16 修复已禁用"
-        return 0
-    fi
-    
-    local brand=$(getprop ro.product.brand)
-    local android_version=$(getprop ro.build.version.release)
-    
-    log "INFO" "设备信息: $brand Android $android_version"
-    
-    # OnePlus + Android 16 需要清理 REJECT 规则
-    if [ "$brand" = "OnePlus" ] && [ "$android_version" = "16" ]; then
-        log "INFO" "检测到 OnePlus Android 16，执行兼容修复"
+    # 如果启用 OnePlus A16 修复，直接执行
+    if [ "$ONEPLUS_A16_FIX" = "1" ]; then
+        log "INFO" "OnePlus A16 修复已启用，执行修复脚本"
         if [ -f "$MODDIR/scripts/utils/oneplus_a16_fix.sh" ]; then
             sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
-            log "INFO" "OnePlus A16 修复执行完成"
         else
-            log "WARN" "修复脚本不存在"
+            log "WARN" "修复脚本不存在: oneplus_a16_fix.sh"
         fi
     fi
 }
@@ -143,7 +131,7 @@ if wait_for_boot; then
     # 检查是否启用开机自启
     if [ "$AUTO_START" = "1" ]; then
         log "INFO" "开始启动服务..."
-        sh "$MODDIR/scripts/core/start.sh"
+        sh "$MODDIR/scripts/core/service.sh" start
         log "INFO" "服务启动完成"
     else
         log "INFO" "开机自启已禁用，跳过启动"

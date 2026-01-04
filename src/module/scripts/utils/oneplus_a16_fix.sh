@@ -22,56 +22,70 @@ log() {
     local level="${1:-INFO}"
     local message="$2"
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$LOG_FILE"
+    echo "[$level] $message" >&2
 }
 
 #######################################
-# 清理 REJECT iptables / ip6tables 规则
-# OnePlus Android 16 可能会在这些链中添加 REJECT 规则
+# 清理指定链中的 REJECT 规则
+# Arguments:
+#   $1 - iptables 命令 (iptables / ip6tables)
+#   $2 - 链名
+#######################################
+remove_reject_from_chain() {
+    local cmd="$1"
+    local chain="$2"
+    local table="filter"
+    
+    # 一次性获取所有 REJECT 规则的行号（倒序，避免删除时行号错位）
+    local line_numbers
+    line_numbers=$(
+        $cmd -t "$table" -nvL "$chain" --line-numbers 2>/dev/null \
+        | awk '/REJECT/ {print $1}' \
+        | sort -rn
+    )
+    
+    if [ -z "$line_numbers" ]; then
+        log "INFO" "$cmd: $chain 链中未发现 REJECT 规则"
+        return 0
+    fi
+    
+    # 统计删除数量
+    local count=0
+    
+    # 逐行删除（已倒序，从大到小删除不会影响行号）
+    for line_num in $line_numbers; do
+        if $cmd -t "$table" -D "$chain" "$line_num" 2>/dev/null; then
+            log "INFO" "已删除 ($cmd) $chain 第 $line_num 行 REJECT 规则"
+            count=$((count + 1))
+        else
+            log "WARN" "删除失败 ($cmd) $chain 第 $line_num 行"
+        fi
+    done
+    
+    log "INFO" "$cmd: $chain 链共删除 $count 条 REJECT 规则"
+}
+
+#######################################
+# 主清理函数
 #######################################
 remove_reject_rules() {
-
-    local table="filter"
     local chains="fw_INPUT fw_OUTPUT"
-
+    
+    # 预检查命令是否存在
+    local has_iptables=0
+    local has_ip6tables=0
+    
+    command -v iptables >/dev/null 2>&1 && has_iptables=1
+    command -v ip6tables >/dev/null 2>&1 && has_ip6tables=1
+    
+    if [ "$has_iptables" -eq 0 ] && [ "$has_ip6tables" -eq 0 ]; then
+        log "ERROR" "iptables 和 ip6tables 命令均不存在"
+        return 1
+    fi
+    
     for chain in $chains; do
-        for cmd in iptables ip6tables; do
-
-            if ! command -v "$cmd" >/dev/null 2>&1; then
-                log "WARN" "跳过：$cmd 命令不存在"
-                continue
-            fi
-
-            local reject_lines
-            reject_lines=$(
-                $cmd -t "$table" -nvL "$chain" --line-numbers 2>/dev/null \
-                | grep 'REJECT' || true
-            )
-
-            if [ -z "$reject_lines" ]; then
-                log "INFO" "$cmd: $chain 链中未发现 REJECT 规则"
-                continue
-            fi
-
-            echo "$reject_lines" \
-            | awk '{print $1}' \
-            | sort -nr \
-            | while read -r line_num; do
-
-                [ -z "$line_num" ] && continue
-
-                local full_rule
-                full_rule=$(
-                    $cmd -t "$table" -nvL "$chain" --line-numbers 2>/dev/null \
-                    | awk -v ln="$line_num" '$1 == ln { sub(/^[ \t]*[0-9]+[ \t]*/, ""); print }'
-                )
-
-                if $cmd -t "$table" -D "$chain" "$line_num" 2>/dev/null; then
-                    log "INFO" "已删除 ($cmd) $chain 第 $line_num 行: $full_rule"
-                else
-                    log "WARN" "删除失败 ($cmd) $chain 第 $line_num 行: $full_rule"
-                fi
-            done
-        done
+        [ "$has_iptables" -eq 1 ] && remove_reject_from_chain "iptables" "$chain"
+        [ "$has_ip6tables" -eq 1 ] && remove_reject_from_chain "ip6tables" "$chain"
     done
 }
 
