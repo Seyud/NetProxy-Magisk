@@ -41,16 +41,16 @@ export class KSUService {
 
     // 启动服务（非阻塞）
     static async startService() {
-        // 后台执行启动脚本，不等待完成
-        exec(`su -c "nohup sh ${this.MODULE_PATH}/scripts/core/start.sh > /dev/null 2>&1 &"`);
+        // 后台执行服务脚本，不等待完成
+        exec(`su -c "nohup sh ${this.MODULE_PATH}/scripts/core/service.sh start > /dev/null 2>&1 &"`);
         // 轮询等待服务启动
         return await this.pollServiceStatus('running', 15000);
     }
 
     // 停止服务（非阻塞）
     static async stopService() {
-        // 后台执行停止脚本，不等待完成
-        exec(`su -c "nohup sh ${this.MODULE_PATH}/scripts/core/stop.sh > /dev/null 2>&1 &"`);
+        // 后台执行服务脚本，不等待完成
+        exec(`su -c "nohup sh ${this.MODULE_PATH}/scripts/core/service.sh stop > /dev/null 2>&1 &"`);
         // 轮询等待服务停止
         return await this.pollServiceStatus('stopped', 10000);
     }
