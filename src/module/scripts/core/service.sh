@@ -95,6 +95,18 @@ do_start() {
     local outbound_config
     outbound_config=$(get_config_path)
     
+    # 读取出站模式
+    local outbound_mode
+    outbound_mode=$(grep '^OUTBOUND_MODE=' "$MODULE_CONF" 2>/dev/null | cut -d'=' -f2)
+    outbound_mode="${outbound_mode:-rule}"
+    log "INFO" "当前出站模式: $outbound_mode"
+    
+    # 直连模式使用 default.json (freedom 协议)
+    if [ "$outbound_mode" = "direct" ]; then
+        outbound_config="$OUTBOUNDS_DIR/default.json"
+        log "INFO" "直连模式: 使用 default.json"
+    fi
+    
     [ -f "$outbound_config" ] || die "出站配置文件不存在: $outbound_config"
     [ -d "$CONFDIR" ] || die "confdir 目录不存在: $CONFDIR"
     

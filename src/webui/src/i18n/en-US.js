@@ -34,6 +34,11 @@ export default {
     'status.traffic_today': 'Traffic Usage',
     'status.service_status': 'Service Status',
     'status.outbound_mode': 'Outbound Mode',
+    'status.mode_rule': 'Rule',
+    'status.mode_global': 'Global',
+    'status.mode_direct': 'Direct',
+    'status.mode_switched': 'Mode switched successfully',
+    'status.mode_switch_failed': 'Mode switch failed',
 
     // Config Page Extra
     'config.management': 'Node Management',

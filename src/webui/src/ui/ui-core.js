@@ -48,6 +48,7 @@ export class UI {
         this.setupDialogs();
         this.setupAppSelector();
         this.uidPage.init();
+        this.statusPage.setupModeButtons();
         this.logsPage.init();
 
         try {

@@ -39,6 +39,125 @@ export class KSUService {
         }
     }
 
+    // 获取当前出站模式
+    static async getOutboundMode() {
+        try {
+            const output = await this.exec(`grep '^OUTBOUND_MODE=' ${this.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`);
+            return output.trim() || 'rule';
+        } catch (error) {
+            return 'rule';
+        }
+    }
+
+    // 设置出站模式 (使用 Xray API 热更新)
+    // 逻辑:
+    // - 规则模式: Shell 脚本直接应用 03_routing.json
+    // - 全局模式: 生成全局规则 JSON, Shell 脚本应用
+    // - 直连模式: 生成直连规则 JSON, Shell 脚本替换出站并应用
+    static async setOutboundMode(mode) {
+        try {
+            let rulesFile = '';
+
+            // 只有全局和直连模式需要生成自定义路由规则
+            // 规则模式由 Shell 脚本直接读取 03_routing.json
+            if (mode === 'global') {
+                const rulesJson = await this.generateGlobalRules();
+                rulesFile = `${this.MODULE_PATH}/logs/.mode_rules.json`;
+                const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
+                await this.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
+            } else if (mode === 'direct') {
+                const rulesJson = await this.generateDirectRules();
+                rulesFile = `${this.MODULE_PATH}/logs/.mode_rules.json`;
+                const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
+                await this.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
+            }
+            // rule 模式不需要生成规则文件，Shell 脚本会直接使用 03_routing.json
+
+            // 调用 switch-mode.sh 脚本
+            const result = await this.exec(`sh ${this.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`);
+
+            // 清理临时文件
+            if (rulesFile) {
+                await this.exec(`rm -f ${rulesFile}`).catch(() => { });
+            }
+
+            return result.includes('success');
+        } catch (error) {
+            console.error('设置出站模式失败:', error);
+            return false;
+        }
+    }
+
+    // 生成全局模式路由规则 (仅"最终代理" + DNS 规则)
+    static async generateGlobalRules() {
+        return {
+            routing: {
+                domainStrategy: 'AsIs',
+                rules: [
+                    // DNS 劫持 (必须保留)
+                    {
+                        type: 'field',
+                        inboundTag: ['tproxy-in'],
+                        port: '53',
+                        outboundTag: 'dns-out'
+                    },
+                    // 最终代理 (全局模式核心)
+                    {
+                        type: 'field',
+                        port: '0-65535',
+                        outboundTag: 'proxy'
+                    },
+                    // DNS 模块规则 (必须保留)
+                    {
+                        type: 'field',
+                        inboundTag: ['domestic-dns'],
+                        outboundTag: 'direct'
+                    },
+                    {
+                        type: 'field',
+                        inboundTag: ['dns-module'],
+                        outboundTag: 'proxy'
+                    }
+                ]
+            }
+        };
+    }
+
+    // 生成直连模式路由规则
+    static async generateDirectRules() {
+        return {
+            routing: {
+                domainStrategy: 'AsIs',
+                rules: [
+                    // DNS 劫持 (必须保留)
+                    {
+                        type: 'field',
+                        inboundTag: ['tproxy-in'],
+                        port: '53',
+                        outboundTag: 'dns-out'
+                    },
+                    // 全部直连 (直连模式核心)
+                    {
+                        type: 'field',
+                        port: '0-65535',
+                        outboundTag: 'direct'
+                    },
+                    // DNS 模块规则 (必须保留)
+                    {
+                        type: 'field',
+                        inboundTag: ['domestic-dns'],
+                        outboundTag: 'direct'
+                    },
+                    {
+                        type: 'field',
+                        inboundTag: ['dns-module'],
+                        outboundTag: 'direct'
+                    }
+                ]
+            }
+        };
+    }
+
     // 启动服务（非阻塞）
     static async startService() {
         // 后台执行服务脚本，不等待完成

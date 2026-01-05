@@ -56,6 +56,9 @@ export class StatusPageManager {
             // 更新 IP 和流量信息
             await this.updateIPAndTraffic();
 
+            // 更新出站模式 UI
+            await this.updateModeUI();
+
             // 初始化图表
             if (!this.speedChart) {
                 this.initSpeedChart();
@@ -355,6 +358,85 @@ export class StatusPageManager {
             // 添加两个空格作为物理占位符，防止右侧紧贴
             fabRuntime.textContent = uptimeStr + '\u00A0\u00A0';
         }
+    }
+
+    // 更新出站模式 UI
+    async updateModeUI() {
+        try {
+            const currentMode = await KSUService.getOutboundMode();
+
+            // 更新按钮状态
+            const modeOptions = document.querySelectorAll('.mode-option');
+            modeOptions.forEach(option => {
+                const mode = option.dataset.mode;
+                if (mode === currentMode) {
+                    option.classList.add('active');
+                } else {
+                    option.classList.remove('active');
+                }
+            });
+        } catch (error) {
+            console.error('更新模式 UI 失败:', error);
+        }
+    }
+
+    // 设置模式按钮点击事件
+    setupModeButtons() {
+        const modeOptions = document.querySelectorAll('.mode-option');
+
+        modeOptions.forEach(option => {
+            option.addEventListener('click', async () => {
+                const mode = option.dataset.mode;
+
+                // 避免重复点击
+                if (option.classList.contains('active') || option.classList.contains('loading')) {
+                    return;
+                }
+
+                // 显示加载状态
+                option.classList.add('loading');
+                const originalLabel = option.querySelector('.mode-label');
+                const originalText = originalLabel?.textContent || '';
+                if (originalLabel) {
+                    originalLabel.textContent = '...';
+                }
+
+                try {
+                    const success = await KSUService.setOutboundMode(mode);
+
+                    if (success) {
+                        // 更新所有按钮状态
+                        modeOptions.forEach(opt => opt.classList.remove('active'));
+                        option.classList.add('active');
+
+                        // 显示成功提示
+                        const modeNames = {
+                            'rule': I18nService.t('status.mode_rule') || '规则',
+                            'global': I18nService.t('status.mode_global') || '全局',
+                            'direct': I18nService.t('status.mode_direct') || '直连'
+                        };
+                        import('../utils/toast.js').then(({ toast }) => {
+                            toast(I18nService.t('status.mode_switched') || `已切换到${modeNames[mode]}模式`);
+                        });
+                    } else {
+                        import('../utils/toast.js').then(({ toast }) => {
+                            toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
+                        });
+                    }
+                } catch (error) {
+                    console.error('模式切换失败:', error);
+                    import('../utils/toast.js').then(({ toast }) => {
+                        toast(error.message || '模式切换失败');
+                    });
+                } finally {
+                    // 恢复按钮状态
+                    option.classList.remove('loading');
+                    if (originalLabel) {
+                        originalLabel.textContent = originalText;
+                    }
+                }
+            });
+        });
     }
 
 

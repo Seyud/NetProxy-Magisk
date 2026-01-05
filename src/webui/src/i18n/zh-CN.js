@@ -34,6 +34,11 @@ export default {
     'status.traffic_today': '流量统计',
     'status.service_status': '服务状态',
     'status.outbound_mode': '出站模式',
+    'status.mode_rule': '规则',
+    'status.mode_global': '全局',
+    'status.mode_direct': '直连',
+    'status.mode_switched': '模式切换成功',
+    'status.mode_switch_failed': '模式切换失败',
 
     // Config Page Extra
     'config.management': '节点管理',
