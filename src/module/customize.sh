@@ -18,6 +18,7 @@ readonly PRESERVE_CONFIGS="
     routing_rules.json
     tproxy.conf
     xray/outbounds
+    xray/confdir/02_dns.json
     xray/confdir/03_routing.json
 "
 
