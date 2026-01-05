@@ -351,7 +351,6 @@
     padding-right: 0;
 }
 
-/* ==================== 暗色主题 ==================== */
 
 
 /* ==================== Charts ==================== */
@@ -368,6 +367,22 @@
     font-family: inherit;
 }
 
+
+
 .u-wrap {
     margin: 0 auto;
+}
+
+/* ==================== 迁移自 status-card.css ==================== */
+.compact-card {
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+}
+
+/* ==================== UI 细节微调 ==================== */
+
+/* 顶部标题稍微下移 */
+mdui-top-app-bar-title {
+    padding-top: 4px;
 }

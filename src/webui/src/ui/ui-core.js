@@ -183,15 +183,17 @@ export class UI {
         const themeBtn = document.getElementById('theme-toggle');
         this.applyTheme(this.currentTheme);
 
-        themeBtn.addEventListener('click', () => {
-            const themes = ['light', 'dark', 'auto'];
-            const currentIndex = themes.indexOf(this.currentTheme);
-            this.currentTheme = themes[(currentIndex + 1) % themes.length];
-            localStorage.setItem('theme', this.currentTheme);
-            this.applyTheme(this.currentTheme);
-            const modeName = this.currentTheme === 'auto' ? I18nService.t('settings.theme.mode_auto') : this.currentTheme === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
-            toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
-        });
+        if (themeBtn) {
+            themeBtn.addEventListener('click', () => {
+                const themes = ['light', 'dark', 'auto'];
+                const currentIndex = themes.indexOf(this.currentTheme);
+                this.currentTheme = themes[(currentIndex + 1) % themes.length];
+                localStorage.setItem('theme', this.currentTheme);
+                this.applyTheme(this.currentTheme);
+                const modeName = this.currentTheme === 'auto' ? I18nService.t('settings.theme.mode_auto') : this.currentTheme === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
+                toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
+            });
+        }
     }
 
     applyTheme(theme) {
