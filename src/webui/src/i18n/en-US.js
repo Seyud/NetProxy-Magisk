@@ -319,6 +319,8 @@ export default {
     'config.sub_helper': 'Supports Base64 encoded links',
 
     // Proxy Page Detail
+    'settings.proxy.mobile': 'Mobile Data',
+    'settings.proxy.mobile_desc': 'Proxy mobile data traffic',
     'settings.proxy.wifi': 'WiFi',
     'settings.proxy.wifi_desc': 'Proxy WiFi traffic',
     'settings.proxy.hotspot': 'Hotspot',

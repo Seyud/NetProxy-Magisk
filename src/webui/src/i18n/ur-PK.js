@@ -306,6 +306,8 @@ export default {
     'config.sub_helper': 'Base64 انکوڈ شدہ لنکس کو سپورٹ کرتا ہے',
 
     // Proxy Page Detail
+    'settings.proxy.mobile': 'موبائل ڈیٹا',
+    'settings.proxy.mobile_desc': 'موبائل ڈیٹا ٹریفک پراکسی کریں',
     'settings.proxy.wifi': 'WiFi',
     'settings.proxy.wifi_desc': 'WiFi ٹریفک پراکسی کریں',
     'settings.proxy.hotspot': 'ہاٹ اسپاٹ',

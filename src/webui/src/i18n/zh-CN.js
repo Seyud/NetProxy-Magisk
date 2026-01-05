@@ -319,6 +319,8 @@ export default {
     'config.sub_helper': '支持 Base64 编码的订阅链接',
 
     // Proxy Page Detail
+    'settings.proxy.mobile': '移动数据',
+    'settings.proxy.mobile_desc': '代理移动数据流量',
     'settings.proxy.wifi': 'WiFi',
     'settings.proxy.wifi_desc': '代理 WiFi 流量',
     'settings.proxy.hotspot': '热点',
