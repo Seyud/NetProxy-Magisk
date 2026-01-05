@@ -1,8 +1,8 @@
 import { KSUService } from '../services/ksu-service.js';
 import { I18nService } from '../services/i18n-service.js';
 import { toast } from '../utils/toast.js';
-import uPlot from 'uplot';
-import 'uplot/dist/uPlot.min.css';
+import uPlot from '../libs/uPlot.esm.js';
+import '../libs/uPlot.min.css';
 
 /**
  * 状态页面管理器
