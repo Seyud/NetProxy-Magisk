@@ -7,8 +7,7 @@ import 'mdui/mdui.css';
 import 'mdui';
 import { UI } from './ui/ui-core.js';
 
-// 元旦特效（仅在1月1日-3日显示）
-import './ui/new-year-effects.js';
+
 
 /**
  * 等待 KernelSU 环境准备好再初始化
