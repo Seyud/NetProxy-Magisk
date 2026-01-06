@@ -4,10 +4,10 @@
             "tag": "tproxy-in",
             "port": 12345,
             "protocol": "dokodemo-door",
-            "level": 8,
             "settings": {
                 "network": "tcp,udp",
-                "followRedirect": true
+                "followRedirect": true,
+                "level": 0
             },
             "sniffing": {
                 "enabled": true,
