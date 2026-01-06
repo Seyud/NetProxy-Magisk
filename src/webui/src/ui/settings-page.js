@@ -1,5 +1,6 @@
 import { toast } from '../utils/toast.js';
-import { KSUService } from '../services/ksu-service.js';
+import { SettingsService } from '../services/settings-service.js';
+import { ShellService } from '../services/shell-service.js';
 import { I18nService } from '../services/i18n-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
@@ -83,7 +84,7 @@ export class SettingsPageManager {
         if (autoStartSwitch) {
             autoStartSwitch.addEventListener('change', async (e) => {
                 try {
-                    await KSUService.setModuleSetting('AUTO_START', e.target.checked);
+                    await SettingsService.setModuleSetting('AUTO_START', e.target.checked);
                     toast(I18nService.t('settings.module.toast_autostart') + (e.target.checked ? I18nService.t('common.enabled') : I18nService.t('common.disabled')));
                 } catch (error) {
                     toast(I18nService.t('common.set_failed') + error.message, true);
@@ -96,11 +97,11 @@ export class SettingsPageManager {
         if (oneplusFixSwitch) {
             oneplusFixSwitch.addEventListener('change', async (e) => {
                 try {
-                    await KSUService.setModuleSetting('ONEPLUS_A16_FIX', e.target.checked);
+                    await SettingsService.setModuleSetting('ONEPLUS_A16_FIX', e.target.checked);
 
                     // 如果启用，立即执行修复脚本
                     if (e.target.checked) {
-                        await KSUService.executeOneplusFix();
+                        await SettingsService.executeOneplusFix();
                         toast(I18nService.t('settings.module.toast_oneplus'));
                     } else {
                         toast(I18nService.t('settings.module.toast_oneplus_disabled'));
@@ -208,7 +209,7 @@ export class SettingsPageManager {
 
     async loadRoutingRules() {
         try {
-            this.routingRules = await KSUService.getRoutingRules();
+            this.routingRules = await SettingsService.getRoutingRules();
             this.renderRoutingRules();
         } catch (error) {
             console.error('加载路由规则失败:', error);
@@ -502,8 +503,8 @@ export class SettingsPageManager {
 
     async saveRulesToBackend() {
         try {
-            await KSUService.saveRoutingRules(this.routingRules);
-            await KSUService.applyRoutingRules(this.routingRules);
+            await SettingsService.saveRoutingRules(this.routingRules);
+            await SettingsService.applyRoutingRules(this.routingRules);
         } catch (error) {
             console.error('保存规则失败:', error);
             toast(I18nService.t('common.save_failed') + error.message);
@@ -534,7 +535,7 @@ export class SettingsPageManager {
             toast(I18nService.t('routing.toast_importing'));
 
             // 通过 KSU shell 执行 curl 获取内容
-            const content = await KSUService.fetchUrl(url);
+            const content = await ShellService.fetchUrl(url);
 
             if (!content) {
                 toast(I18nService.t('routing.toast_fetch_failed'));
@@ -674,7 +675,7 @@ export class SettingsPageManager {
 
     async loadDnsConfig() {
         try {
-            this.dnsConfig = await KSUService.getDnsConfig();
+            this.dnsConfig = await SettingsService.getDnsConfig();
             this.renderDnsServers();
             this.renderDnsHosts();
         } catch (error) {
@@ -951,7 +952,7 @@ export class SettingsPageManager {
 
     async saveDnsToBackend() {
         try {
-            await KSUService.saveDnsConfig(this.dnsConfig);
+            await SettingsService.saveDnsConfig(this.dnsConfig);
         } catch (error) {
             console.error('保存 DNS 配置失败:', error);
             toast(I18nService.t('common.save_failed') + error.message);
@@ -994,7 +995,7 @@ export class SettingsPageManager {
 
     async loadProxySettings() {
         try {
-            const settings = await KSUService.getProxySettings();
+            const settings = await SettingsService.getProxySettings();
             for (const key of this.proxyKeys) {
                 const htmlId = key.replace('_', '-');
                 const switchEl = document.getElementById(htmlId);
@@ -1004,7 +1005,7 @@ export class SettingsPageManager {
             }
 
             // 加载代理模式
-            const proxyMode = await KSUService.getProxyMode();
+            const proxyMode = await SettingsService.getProxyMode();
             const proxyModeGroup = document.getElementById('proxy-mode-settings');
             const proxyModeDesc = document.getElementById('proxy-mode-desc-settings');
             if (proxyModeGroup) {
@@ -1020,7 +1021,7 @@ export class SettingsPageManager {
 
     async setProxySetting(key, value) {
         try {
-            await KSUService.setProxySetting(key, value);
+            await SettingsService.setProxySetting(key, value);
             toast(value ? I18nService.t('common.enabled') : I18nService.t('common.disabled'));
         } catch (error) {
             toast(I18nService.t('common.set_failed') + error.message);
@@ -1035,7 +1036,7 @@ export class SettingsPageManager {
 
     async setProxyMode(value) {
         try {
-            await KSUService.setProxyMode(value);
+            await SettingsService.setProxyMode(value);
             this.updateProxyModeDesc(value);
             const modeNames = { '0': I18nService.t('settings.proxy.mode_auto'), '1': I18nService.t('settings.proxy.mode_tproxy'), '2': I18nService.t('settings.proxy.mode_redirect') };
             toast(I18nService.t('settings.proxy.toast_mode_set') + (modeNames[value] || value));
@@ -1433,11 +1434,11 @@ export class SettingsPageManager {
         });
 
         dialog.querySelector('#about-github')?.addEventListener('click', () => {
-            KSUService.openExternalUrl('https://github.com/Fanju6/NetProxy-Magisk');
+            SettingsService.openExternalUrl('https://github.com/Fanju6/NetProxy-Magisk');
         });
 
         dialog.querySelector('#about-telegram')?.addEventListener('click', () => {
-            KSUService.openExternalUrl('https://t.me/NetProxy_Magisk');
+            SettingsService.openExternalUrl('https://t.me/NetProxy_Magisk');
         });
 
         dialog.querySelector('mdui-button').addEventListener('click', () => {
@@ -1453,7 +1454,7 @@ export class SettingsPageManager {
     // 加载模块设置
     async loadModuleSettings() {
         try {
-            const settings = await KSUService.getModuleSettings();
+            const settings = await SettingsService.getModuleSettings();
 
             const autoStartSwitch = document.getElementById('module-auto-start');
             if (autoStartSwitch) {

@@ -1,5 +1,6 @@
 import { setTheme } from 'mdui';
-import { KSUService } from '../services/ksu-service.js';
+import { StatusService } from '../services/status-service.js';
+import { SettingsService } from '../services/settings-service.js';
 import { I18nService } from '../services/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import { StatusPageManager } from './status-page.js';
@@ -159,12 +160,12 @@ export class UI {
                 fab.icon = 'hourglass_empty';
 
                 if (isRunning) {
-                    const success = await KSUService.stopService();
+                    const success = await StatusService.stopService();
                     if (!success) {
                         toast(I18nService.t('status.service_stop_timeout'));
                     }
                 } else {
-                    const success = await KSUService.startService();
+                    const success = await StatusService.startService();
                     if (!success) {
                         toast(I18nService.t('status.service_start_timeout'));
                     }
@@ -275,7 +276,7 @@ export class UI {
 
                 setTimeout(async () => {
                     try {
-                        const result = await KSUService.updateXray();
+                        const result = await SettingsService.updateXray();
 
                         if (result.success) {
                             toast(result.message);

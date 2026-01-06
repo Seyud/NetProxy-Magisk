@@ -1,4 +1,4 @@
-import { KSUService } from '../services/ksu-service.js';
+import { StatusService } from '../services/status-service.js';
 import { I18nService } from '../services/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import uPlot from '../libs/uPlot.esm.js';
@@ -28,7 +28,7 @@ export class StatusPageManager {
 
     async update() {
         try {
-            const { status } = await KSUService.getStatus();
+            const { status } = await StatusService.getStatus();
 
             // 更新 FAB 按钮状态
             const fab = document.getElementById('service-fab');
@@ -39,7 +39,7 @@ export class StatusPageManager {
                 fabContainer.classList.add('running');
 
                 if (!this.uptimeInterval) {
-                    const uptime = await KSUService.getUptime();
+                    const uptime = await StatusService.getUptime();
                     if (uptime && uptime !== '--' && uptime !== 'N/A' && !uptime.includes('failed')) {
                         this.startUptimeTimer(uptime);
                     }
@@ -71,7 +71,7 @@ export class StatusPageManager {
 
     async updateNetworkSpeed() {
         try {
-            const speed = await KSUService.getNetworkSpeed();
+            const speed = await StatusService.getNetworkSpeed();
             const downloadValue = parseFloat(speed.download.replace(' KB/s', '').trim()) || 0;
             const uploadValue = parseFloat(speed.upload.replace(' KB/s', '').trim()) || 0;
 
@@ -119,7 +119,7 @@ export class StatusPageManager {
     async updateIPAndTraffic() {
         // 内网 IP
         try {
-            const ips = await KSUService.getInternalIP();
+            const ips = await StatusService.getInternalIP();
             const internalEl = document.getElementById('internal-ip');
             if (internalEl) {
                 if (ips && ips.length > 0) {
@@ -136,7 +136,7 @@ export class StatusPageManager {
 
         // 外网 IP
         try {
-            const externalIP = await KSUService.getExternalIP();
+            const externalIP = await StatusService.getExternalIP();
             const el = document.getElementById('external-ip');
             if (el) {
                 el.textContent = externalIP || '--';
@@ -148,7 +148,7 @@ export class StatusPageManager {
 
         // 流量统计
         try {
-            const stats = await KSUService.getTrafficStats();
+            const stats = await StatusService.getTrafficStats();
             this.trafficStats = stats;
 
             // 更新上传/下载显示
@@ -364,7 +364,7 @@ export class StatusPageManager {
     // 更新出站模式 UI
     async updateModeUI() {
         try {
-            const currentMode = await KSUService.getOutboundMode();
+            const currentMode = await StatusService.getOutboundMode();
 
             // 更新按钮状态
             const modeOptions = document.querySelectorAll('.mode-option');
@@ -417,7 +417,7 @@ export class StatusPageManager {
                 option.classList.add('active');
 
                 try {
-                    const success = await KSUService.setOutboundMode(mode);
+                    const success = await StatusService.setOutboundMode(mode);
 
                     if (!success) {
                         // 切换失败，恢复状态

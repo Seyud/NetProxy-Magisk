@@ -1,4 +1,4 @@
-import { KSUService } from '../services/ksu-service.js';
+import { SettingsService } from '../services/settings-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../services/i18n-service.js';
 
@@ -112,7 +112,7 @@ export class LogsPageManager {
         if (!container) return;
 
         try {
-            const log = await KSUService.getServiceLog();
+            const log = await SettingsService.getServiceLog();
             this.renderLog(container, log);
         } catch (error) {
             container.innerHTML = `<span style="color: var(--mdui-color-error);">${I18nService.t('logs.load_failed')}: ${error.message}</span>`;
@@ -124,7 +124,7 @@ export class LogsPageManager {
         if (!container) return;
 
         try {
-            const log = await KSUService.getXrayLog();
+            const log = await SettingsService.getXrayLog();
             this.renderLog(container, log);
         } catch (error) {
             container.innerHTML = `<span style="color: var(--mdui-color-error);">${I18nService.t('logs.load_failed')}: ${error.message}</span>`;
@@ -136,7 +136,7 @@ export class LogsPageManager {
         if (!container) return;
 
         try {
-            const log = await KSUService.getTproxyLog();
+            const log = await SettingsService.getTproxyLog();
             this.renderLog(container, log);
         } catch (error) {
             container.innerHTML = `<span style="color: var(--mdui-color-error);">${I18nService.t('logs.load_failed')}: ${error.message}</span>`;
@@ -165,7 +165,7 @@ export class LogsPageManager {
     // 导出日志
     async exportLogs() {
         try {
-            const result = await KSUService.exportLogs();
+            const result = await SettingsService.exportLogs();
             if (result.success) {
                 toast(I18nService.t('logs.saved_to') + result.path);
             } else {
@@ -179,7 +179,7 @@ export class LogsPageManager {
     // 导出日志和配置
     async exportAll() {
         try {
-            const result = await KSUService.exportAll();
+            const result = await SettingsService.exportAll();
             if (result.success) {
                 toast(I18nService.t('logs.saved_all_to') + result.path);
             } else {
@@ -193,7 +193,7 @@ export class LogsPageManager {
     // 清空调试日志
     async clearDebugLogs() {
         try {
-            await KSUService.clearDebugLogs();
+            await SettingsService.clearDebugLogs();
             toast(I18nService.t('logs.debug_cleared'));
             this.loadActiveLog();
         } catch (error) {

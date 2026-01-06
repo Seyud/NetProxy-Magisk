@@ -1,4 +1,6 @@
-import { KSUService } from '../services/ksu-service.js';
+import { ConfigService } from '../services/config-service.js';
+import { StatusService } from '../services/status-service.js';
+import { ShellService } from '../services/shell-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../services/i18n-service.js';
 
@@ -79,11 +81,11 @@ export class ConfigPageManager {
             }
 
             // 1. 获取目录结构（快速，无详情）
-            const groups = await KSUService.getConfigStructure();
+            const groups = await ConfigService.getConfigGroups();
 
             // 2. 更新缓存
             this._cachedGroups = groups;
-            const { config } = await KSUService.getStatus();
+            const { config } = await StatusService.getStatus();
             this._cachedCurrentConfig = config;
 
             // 3. 立即渲染结构
@@ -143,7 +145,7 @@ export class ConfigPageManager {
         const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
 
         // 批量读取
-        const newInfos = await KSUService.batchReadConfigInfos(filePaths);
+        const newInfos = await ConfigService.batchReadConfigInfos(filePaths);
 
         // 更新缓存并刷新 UI
         for (const [fname, info] of newInfos) {
@@ -191,7 +193,7 @@ export class ConfigPageManager {
         pendingFiles.forEach(f => groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }));
 
         const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
-        const newInfos = await KSUService.batchReadConfigInfos(filePaths);
+        const newInfos = await ConfigService.batchReadConfigInfos(filePaths);
 
         for (const [fname, info] of newInfos) {
             groupInfos.set(fname, info);
@@ -426,7 +428,7 @@ export class ConfigPageManager {
         );
 
         // 批量读取所有配置信息（单次 exec）
-        return await KSUService.batchReadConfigInfos(filePaths);
+        return await ConfigService.batchReadConfigInfos(filePaths);
     }
 
     renderConfigItem(container, filename, fullPath, info, isCurrent, group) {
@@ -583,7 +585,7 @@ export class ConfigPageManager {
                 latencyLabel.textContent = I18nService.t('config.status.testing');
                 latencyLabel.style.color = 'var(--mdui-color-on-surface-variant)';
             }
-            const latencyStr = await KSUService.getPingLatency(address);
+            const latencyStr = await ShellService.getPingLatency(address);
             let latencyVal = 9999;
 
             if (latencyLabel) {
@@ -707,7 +709,7 @@ export class ConfigPageManager {
 
         for (const filename of invalidFiles) {
             const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
-            const result = await KSUService.deleteConfig(fullPath);
+            const result = await ConfigService.deleteConfig(fullPath);
             if (result && result.success) {
                 successCount++;
             }
@@ -724,7 +726,7 @@ export class ConfigPageManager {
             const confirmed = await this.ui.confirm(I18nService.t('config.confirm.delete_node', { name: displayName }));
             if (!confirmed) return;
 
-            const result = await KSUService.deleteConfig(fullPath);
+            const result = await ConfigService.deleteConfig(fullPath);
             if (result && result.success) {
                 toast(I18nService.t('config.toast.deleted'));
                 // 强制刷新配置列表
@@ -741,7 +743,7 @@ export class ConfigPageManager {
 
     async switchConfig(fullPath, displayName) {
         try {
-            await KSUService.switchConfig(fullPath);
+            await ConfigService.switchConfig(fullPath);
             toast(I18nService.t('config.toast.switch_success') + displayName);
             // 更新当前配置缓存
             this._cachedCurrentConfig = fullPath;
@@ -764,7 +766,7 @@ export class ConfigPageManager {
         setTimeout(async () => {
             try {
                 // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
-                await KSUService.updateSubscription(displayName);
+                await ConfigService.updateSubscription(displayName);
                 toast(I18nService.t('config.toast.sub_updated'));
                 // 清除该分组的缓存，强制重新加载
                 this._cachedConfigInfos.delete(displayName);
@@ -782,7 +784,7 @@ export class ConfigPageManager {
             if (!confirmed) return;
 
             // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
-            await KSUService.removeSubscription(displayName);
+            await ConfigService.removeSubscription(displayName);
             toast(I18nService.t('config.toast.sub_deleted'));
             // 清除缓存，强制刷新分组列表
             this._cachedGroups = null;
@@ -835,7 +837,7 @@ export class ConfigPageManager {
         // 使用 setTimeout 让浏览器先渲染 UI，再执行阻塞操作
         setTimeout(async () => {
             try {
-                await KSUService.addSubscription(name, url);
+                await ConfigService.addSubscription(name, url);
                 toast(I18nService.t('config.toast.sub_added'));
                 // 清除缓存，强制刷新分组列表
                 this._cachedGroups = null;
@@ -857,7 +859,7 @@ export class ConfigPageManager {
         if (filename) {
             filenameInput.value = filename;
             filenameInput.disabled = true;
-            const content = await KSUService.readConfig(filename);
+            const content = await ConfigService.readConfig(filename);
             contentInput.value = content;
         } else {
             filenameInput.value = '';
@@ -896,7 +898,7 @@ export class ConfigPageManager {
 
         try {
             JSON.parse(content);
-            await KSUService.saveConfig(filename, content);
+            await ConfigService.saveConfig(filename, content);
             toast(I18nService.t('config.toast.save_success'));
             document.getElementById('config-dialog').open = false;
             this.update();
@@ -923,7 +925,7 @@ export class ConfigPageManager {
         }
 
         try {
-            const result = await KSUService.importFromNodeLink(nodeLink);
+            const result = await ConfigService.importFromNodeLink(nodeLink);
 
             if (result.success) {
                 toast(I18nService.t('config.toast.import_success'));

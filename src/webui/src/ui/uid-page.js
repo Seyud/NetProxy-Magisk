@@ -1,4 +1,4 @@
-import { KSUService } from '../services/ksu-service.js';
+import { AppService } from '../services/app-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../services/i18n-service.js';
 
@@ -73,8 +73,8 @@ export class UIDPageManager {
 
             // 获取代理模式和开关状态
             const [mode, enabled] = await Promise.all([
-                KSUService.getAppProxyMode(),
-                KSUService.getAppProxyEnabled()
+                AppService.getAppProxyMode(),
+                AppService.getAppProxyEnabled()
             ]);
             this.proxyMode = mode;
             this.appProxyEnabled = enabled;
@@ -112,7 +112,7 @@ export class UIDPageManager {
             }
 
             // 获取代理应用列表 Array<{userId, packageName}>
-            this.proxyApps = await KSUService.getProxyApps();
+            this.proxyApps = await AppService.getProxyApps();
 
             if (this.proxyApps.length === 0) {
                 const emptyText = this.proxyMode === 'blacklist'
@@ -123,7 +123,7 @@ export class UIDPageManager {
             }
 
             // 获取所有应用信息（Label, Icon）- 重试逻辑已内置于 fetchAppDetails
-            this.proxyApps = await KSUService.fetchAppDetails(this.proxyApps);
+            this.proxyApps = await AppService.fetchAppDetails(this.proxyApps);
 
             // 列表显示时，如果有 cache 则显示 Label，否则显示 PackageName。
 
@@ -237,13 +237,13 @@ export class UIDPageManager {
         try {
             if (modeValue === 'off') {
                 // 关闭功能
-                await KSUService.setAppProxyEnabled(false);
+                await AppService.setAppProxyEnabled(false);
                 this.appProxyEnabled = false;
                 toast(I18nService.t('uid.toast_proxy_disabled'));
             } else {
                 // 开启功能并设置模式
-                await KSUService.setAppProxyEnabled(true);
-                await KSUService.setAppProxyMode(modeValue);
+                await AppService.setAppProxyEnabled(true);
+                await AppService.setAppProxyMode(modeValue);
                 this.appProxyEnabled = true;
                 this.proxyMode = modeValue;
                 toast(I18nService.t('uid.toast_mode_switched') + (modeValue === 'blacklist' ? I18nService.t('uid.mode_blacklist') : I18nService.t('uid.mode_whitelist')));
@@ -260,7 +260,7 @@ export class UIDPageManager {
         const displayName = appLabel || packageName;
         if (await this.ui.confirm(I18nService.t('uid.confirm_remove', { name: displayName + (displayUser ? ' ' + displayUser : '') }))) {
             try {
-                await KSUService.removeProxyApp(packageName, userIdStr);
+                await AppService.removeProxyApp(packageName, userIdStr);
                 toast(I18nService.t('uid.toast_removed'));
                 // 清除缓存并强制刷新
                 this.proxyApps = [];
@@ -277,9 +277,9 @@ export class UIDPageManager {
         this.ui.showSkeleton(listEl, 5);
         try {
             // 重新获取 (带缓存或者重新 exec)
-            this.allApps = await KSUService.getInstalledApps(this.currentUserId, this.showSystemApps);
+            this.allApps = await AppService.getInstalledApps(this.currentUserId, this.showSystemApps);
             // 获取应用详情（Label, Icon）
-            this.allApps = await KSUService.fetchAppDetails(this.allApps);
+            this.allApps = await AppService.fetchAppDetails(this.allApps);
             this.renderAppList(this.allApps);
         } catch (error) {
             listEl.innerHTML = `<mdui-list-item><div slot="headline">${I18nService.t('logs.load_failed')}</div></mdui-list-item>`;
@@ -295,7 +295,7 @@ export class UIDPageManager {
         // 加载用户列表
         const userSelect = document.getElementById('app-selector-user');
         if (userSelect) {
-            this.users = await KSUService.getUsers();
+            this.users = await AppService.getUsers();
             userSelect.innerHTML = '';
             this.users.forEach(u => {
                 const opt = document.createElement('mdui-menu-item'); // 或者 mdui-option, 取决于 select 实现
@@ -359,7 +359,7 @@ export class UIDPageManager {
 
         for (const app of apps) {
             try {
-                await KSUService.addProxyApp(app.packageName, app.userId);
+                await AppService.addProxyApp(app.packageName, app.userId);
             } catch (error) {
                 // 忽略错误（如应用已存在）
             }
