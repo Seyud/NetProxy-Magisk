@@ -1,6 +1,7 @@
 import { StatusService } from '../services/status-service.js';
 import { I18nService } from '../i18n/i18n-service.js';
 import { toast } from '../utils/toast.js';
+import Sortable from 'sortablejs';
 import uPlot from '../assets/libs/uPlot.esm.js';
 import '../assets/libs/uPlot.min.css';
 import { UI } from './ui-core.js';
@@ -27,6 +28,8 @@ export class StatusPageManager {
     speedHistory: SpeedHistory;
     maxDataPoints: number;
     trafficStats: TrafficStats;
+    sortable: Sortable | null;
+    isEditing: boolean;
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -44,6 +47,187 @@ export class StatusPageManager {
 
         // 流量统计
         this.trafficStats = { rx: 0, tx: 0 };
+
+        // 拖拽编辑相关
+        this.sortable = null;
+        this.isEditing = false;
+
+        // 恢复保存的布局
+        this.loadLayout();
+
+        // 绑定事件
+        this.bindEvents();
+    }
+
+    toggleEditMode(): void {
+        this.isEditing = !this.isEditing;
+        const grid = document.getElementById('dashboard-grid');
+        const btn = document.getElementById('edit-dashboard-btn');
+        const addPanel = document.getElementById('add-widget-panel');
+
+        if (!grid) return;
+
+        if (this.isEditing) {
+            grid.classList.add('editing-mode');
+            if (btn) btn.classList.add('active');
+            if (addPanel) {
+                addPanel.classList.add('visible');
+                this.renderAddWidgetList();
+            }
+
+            // 启用 Sortable
+            this.sortable = new Sortable(grid, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                delay: 200,
+                delayOnTouchOnly: true,
+                filter: '.card-delete-btn', // 过滤器，防止拖拽删除按钮
+                onEnd: () => {
+                    this.saveLayout();
+                }
+            });
+            toast(I18nService.t('common.edit_mode_enabled') || '已进入编辑模式');
+        } else {
+            grid.classList.remove('editing-mode');
+            if (btn) btn.classList.remove('active');
+            if (addPanel) addPanel.classList.remove('visible');
+
+            // 销毁 Sortable
+            if (this.sortable) {
+                this.sortable.destroy();
+                this.sortable = null;
+            }
+            this.saveLayout();
+            toast(I18nService.t('common.layout_saved') || '布局已保存');
+        }
+    }
+
+    saveLayout(): void {
+        const grid = document.getElementById('dashboard-grid');
+        if (!grid) return;
+
+        // 获取所有显示中的卡片 ID 顺序
+        const order = Array.from(grid.children)
+            .filter(el => (el as HTMLElement).style.display !== 'none')
+            .map(el => el.id)
+            .filter(id => id);
+
+        localStorage.setItem('dashboard-layout', JSON.stringify(order));
+    }
+
+    loadLayout(): void {
+        const savedLayout = localStorage.getItem('dashboard-layout');
+        const grid = document.getElementById('dashboard-grid');
+        if (!grid) return;
+
+        const cards = Array.from(grid.children) as HTMLElement[];
+
+        if (savedLayout) {
+            try {
+                const order: string[] = JSON.parse(savedLayout);
+                const fragment = document.createDocumentFragment();
+
+                // 1. 按顺序添加保存的卡片 (显示)
+                order.forEach(id => {
+                    const card = cards.find(el => el.id === id);
+                    if (card) {
+                        card.style.display = ''; // 确保显示
+                        fragment.appendChild(card);
+                    }
+                });
+
+                // 2. 处理未在保存列表中的卡片 (隐藏)
+                cards.forEach(card => {
+                    if (!order.includes(card.id)) {
+                        card.style.display = 'none';
+                        fragment.appendChild(card); // 依然在 DOM 中，只是隐藏
+                    }
+                });
+
+                grid.appendChild(fragment);
+            } catch (e) {
+                console.error('Failed to load dashboard layout', e);
+            }
+        }
+    }
+
+    bindEvents(): void {
+        const grid = document.getElementById('dashboard-grid');
+        if (grid) {
+            // 代理删除按钮点击
+            grid.addEventListener('click', (e: Event) => {
+                const target = e.target as HTMLElement;
+                const deleteBtn = target.closest('.card-delete-btn');
+                if (deleteBtn && this.isEditing) {
+                    const card = deleteBtn.closest('.common-card');
+                    if (card && card.id) {
+                        this.removeCard(card.id);
+                        e.stopPropagation(); // 防止触发卡片点击
+                    }
+                }
+            });
+        }
+
+        const closeAddBtn = document.getElementById('close-add-widget-btn');
+        if (closeAddBtn) {
+            closeAddBtn.addEventListener('click', () => {
+                this.toggleEditMode();
+            });
+        }
+    }
+
+    removeCard(id: string): void {
+        const card = document.getElementById(id);
+        if (card) {
+            card.style.display = 'none';
+            this.saveLayout();
+            this.renderAddWidgetList(); // 刷新添加列表
+        }
+    }
+
+    addCard(id: string): void {
+        const card = document.getElementById(id);
+        const grid = document.getElementById('dashboard-grid');
+        if (card && grid) {
+            card.style.display = ''; // 显示
+            grid.appendChild(card); // 移动到末尾
+            this.saveLayout();
+            this.renderAddWidgetList(); // 刷新添加列表
+        }
+    }
+
+    renderAddWidgetList(): void {
+        const container = document.getElementById('add-widget-list');
+        const grid = document.getElementById('dashboard-grid');
+        if (!container || !grid) return;
+
+        container.innerHTML = '';
+        const hiddenCards = Array.from(grid.children).filter(el => (el as HTMLElement).style.display === 'none');
+
+        if (hiddenCards.length === 0) {
+            container.innerHTML = `<div style="color: var(--monet-on-surface-variant); font-size: 14px; padding: 8px;">无可用组件</div>`;
+            return;
+        }
+
+        hiddenCards.forEach(card => {
+            const titleEl = card.querySelector('.card-title');
+            const iconEl = card.querySelector('.card-icon');
+            const title = titleEl ? titleEl.textContent : card.id;
+            const iconName = iconEl ? iconEl.getAttribute('name') : 'widgets';
+
+            const item = document.createElement('div');
+            item.className = 'widget-preview-item';
+            item.innerHTML = `
+                <mdui-icon name="${iconName}"></mdui-icon>
+                <span>${title}</span>
+                <mdui-icon name="add" style="font-size: 16px; margin-left: 4px;"></mdui-icon>
+            `;
+            item.onclick = () => {
+                this.addCard(card.id);
+            };
+            container.appendChild(item);
+        });
     }
 
     async update(): Promise<void> {
@@ -85,6 +269,14 @@ export class StatusPageManager {
 
             // 更新出站模式 UI
             await this.updateModeUI();
+
+            // 更新系统状态 (CPU/Mem)
+            const sysStatus = await StatusService.getSystemStatus();
+            const cpuEl = document.getElementById('cpu-usage');
+            if (cpuEl) cpuEl.textContent = `${sysStatus.cpu}%`;
+
+            const memEl = document.getElementById('memory-usage');
+            if (memEl) memEl.textContent = `${sysStatus.mem.percentage}%`;
         } catch (error) {
             console.error('Update status failed:', error);
         }

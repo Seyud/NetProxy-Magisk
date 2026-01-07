@@ -151,15 +151,17 @@
       <div style="width: 24px"></div>
       <mdui-top-app-bar-title data-i18n="app.name">NetProxy</mdui-top-app-bar-title>
       <div style="flex-grow: 1"></div>
+      <mdui-button-icon icon="edit" id="edit-dashboard-btn" style="display: none;"></mdui-button-icon>
     </mdui-top-app-bar>
 
     <!-- Main Content -->
     <mdui-layout-main id="main-content">
       <!-- Status Page -->
       <div id="status-page" class="page active">
-        <div class="dashboard-grid">
+        <div class="dashboard-grid" id="dashboard-grid">
           <!-- 网络速度 (全宽, 2格高) -->
-          <div class="common-card full-width height-2 speed-card">
+          <div class="common-card full-width height-2 speed-card" id="card-speed">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
               <mdui-icon name="speed" class="card-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.network_chart">网络速度</span>
@@ -171,7 +173,8 @@
           </div>
 
           <!-- 左列: 出站模式 (2格高) -->
-          <div class="common-card half-width height-2 mode-card">
+          <div class="common-card half-width height-2 mode-card" id="card-mode">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
               <mdui-icon name="call_split" class="card-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.outbound_mode">出站模式</span>
@@ -195,7 +198,8 @@
           </div>
 
           <!-- 右列: 网络检测 (1格高) -->
-          <div class="common-card half-width height-1">
+          <div class="common-card half-width height-1" id="card-external-ip">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
               <mdui-icon name="network_check" class="card-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.network_detection">网络检测</span>
@@ -206,7 +210,8 @@
           </div>
 
           <!-- 左列: 内网IP (1格高) -->
-          <div class="common-card half-width height-1">
+          <div class="common-card half-width height-1" id="card-internal-ip">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
               <mdui-icon name="devices" class="card-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.internal_ip">内网IP</span>
@@ -217,7 +222,8 @@
           </div>
 
           <!-- 右列: 流量统计 (2格高) -->
-          <div class="common-card half-width height-2 traffic-card">
+          <div class="common-card half-width height-2 traffic-card" id="card-traffic">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
               <mdui-icon name="data_saver_off" class="card-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.traffic_today">流量统计</span>
@@ -259,6 +265,41 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- CPU 使用率 (新组件) -->
+          <div class="common-card half-width height-1" id="card-cpu" style="display: none;">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
+            <div class="card-header">
+              <mdui-icon name="memory" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="dashboard.cpu">CPU</span>
+            </div>
+            <div class="card-content">
+              <div class="card-value" id="cpu-usage">--%</div>
+            </div>
+          </div>
+
+          <!-- 内存使用率 (新组件) -->
+          <div class="common-card half-width height-1" id="card-memory" style="display: none;">
+            <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
+            <div class="card-header">
+              <mdui-icon name="storage" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="dashboard.memory">RAM</span>
+            </div>
+            <div class="card-content">
+              <div class="card-value" id="memory-usage">--%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 添加组件面板 -->
+        <div id="add-widget-panel" class="add-widget-panel">
+          <div class="add-widget-header">
+            <span class="title" data-i18n="dashboard.add_widget">添加组件</span>
+            <mdui-button-icon icon="close" id="close-add-widget-btn"></mdui-button-icon>
+          </div>
+          <div class="add-widget-list" id="add-widget-list">
+            <!-- JS 动态生成 -->
           </div>
         </div>
 

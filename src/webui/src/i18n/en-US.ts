@@ -11,6 +11,13 @@ const enUS: Record<string, string> = {
     'common.edit': 'Edit',
     'common.save': 'Save',
     'common.add': 'Add',
+    'common.edit_mode_enabled': 'Edit Mode Enabled',
+    'common.layout_saved': 'Layout Saved',
+    'dashboard.edit': 'Edit Dashboard',
+    'dashboard.add_widget': 'Add Widget',
+    'dashboard.cpu': 'CPU Usage',
+    'dashboard.memory': 'Memory Usage',
+    'dashboard.no_widgets': 'No widgets available',
 
     // Status Page Extra
     'status.uptime': 'Uptime',

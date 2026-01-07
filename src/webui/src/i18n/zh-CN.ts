@@ -11,6 +11,13 @@ const zhCN: Record<string, string> = {
     'common.edit': '编辑',
     'common.save': '保存',
     'common.add': '添加',
+    'common.edit_mode_enabled': '已进入编辑模式',
+    'common.layout_saved': '布局已保存',
+    'dashboard.edit': '编辑仪表盘',
+    'dashboard.add_widget': '添加组件',
+    'dashboard.cpu': 'CPU 使用率',
+    'dashboard.memory': '内存使用率',
+    'dashboard.no_widgets': '暂无可用组件',
 
     // Status Page Extra
     'status.uptime': '运行时间',

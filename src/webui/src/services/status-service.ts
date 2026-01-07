@@ -168,6 +168,100 @@ export class StatusService {
         }
     }
 
+    // ==================== 系统状态监控 ====================
+
+    static _lastSystemCpuTime: number | null = null;
+    static _lastProcessCpuTime: number | null = null;
+    static _lastProcessId: string | null = null;
+
+    // 获取系统状态 (CPU/内存)
+    // 获取 Xray 进程状态 (CPU/内存)
+    static async getSystemStatus(): Promise<{ cpu: number; mem: { total: number; used: number; percentage: number } }> {
+        try {
+            // 1. 获取 PID
+            const pidArg = `/data/adb/modules/netproxy/bin/xray`;
+            const pidResult = await ShellService.exec(`pidof -s ${pidArg} 2>/dev/null || echo`);
+            const pid = pidResult.trim();
+
+            if (!pid) {
+                return { cpu: 0, mem: { total: 0, used: 0, percentage: 0 } };
+            }
+
+            // 2. 获取内存 (VmRSS)
+            const statusResult = await ShellService.exec(`grep VmRSS /proc/${pid}/status 2>/dev/null`);
+            let memUsed = 0; // Bytes
+            if (statusResult) {
+                const match = statusResult.match(/VmRSS:\s+(\d+)\s+kB/);
+                if (match) {
+                    memUsed = parseInt(match[1]) * 1024;
+                }
+            }
+
+            // 获取总内存 (用于计算百分比)
+            const memInfoResult = await ShellService.exec(`grep MemTotal /proc/meminfo 2>/dev/null`);
+            let memTotal = 0;
+            if (memInfoResult) {
+                const match = memInfoResult.match(/MemTotal:\s+(\d+)\s+kB/);
+                if (match) {
+                    memTotal = parseInt(match[1]) * 1024;
+                }
+            }
+
+            // 计算内存百分比 (Xray占用 / 总内存)
+            const memPercentage = memTotal > 0 ? Math.round((memUsed / memTotal) * 1000) / 10 : 0;
+
+            // 3. 获取 CPU 使用率
+            /*
+                ProcessCPU = utime + stime (from /proc/[pid]/stat)
+                TotalSystemCPU = sum(fields) (from /proc/stat)
+            */
+            let cpuUsage = 0;
+            const procStatRaw = await ShellService.exec(`cat /proc/${pid}/stat 2>/dev/null`);
+            const sysStatRaw = await ShellService.exec(`cat /proc/stat | head -n 1`);
+
+            if (procStatRaw && sysStatRaw) {
+                const procParts = procStatRaw.trim().split(/\s+/);
+                const sysParts = sysStatRaw.trim().split(/\s+/);
+
+                if (procParts.length > 15 && sysParts.length > 8) {
+                    const utime = parseInt(procParts[13]);
+                    const stime = parseInt(procParts[14]);
+                    const processTime = utime + stime;
+
+                    const sysTotalTime = sysParts.slice(1).reduce((acc, val) => acc + (parseInt(val) || 0), 0);
+
+                    if (this._lastProcessId === pid && this._lastSystemCpuTime !== null && this._lastProcessCpuTime !== null) {
+                        const procDelta = processTime - this._lastProcessCpuTime;
+                        const sysDelta = sysTotalTime - this._lastSystemCpuTime;
+
+                        if (sysDelta > 0) {
+                            cpuUsage = (procDelta / sysDelta) * 100;
+                            // 保留一位小数
+                            cpuUsage = Math.min(100, Math.max(0, Math.round(cpuUsage * 10) / 10));
+                        }
+                    }
+
+                    this._lastProcessId = pid;
+                    this._lastProcessCpuTime = processTime;
+                    this._lastSystemCpuTime = sysTotalTime;
+                }
+            }
+
+            return {
+                cpu: cpuUsage,
+                mem: {
+                    total: memTotal,
+                    used: memUsed,
+                    percentage: memPercentage
+                }
+            };
+
+        } catch (error) {
+            console.error('Failed to get Xray status:', error);
+            return { cpu: 0, mem: { total: 0, used: 0, percentage: 0 } };
+        }
+    }
+
     // ==================== IP 信息 ====================
 
     // 获取内网IP

@@ -64,8 +64,11 @@ export class UI {
         this.statusPage.setupModeButtons();
         this.logsPage.init();
 
+        // 初始化页面状态 (包括按钮可见性)
+        this.switchPage(this.currentPage);
+
         try {
-            this.updateAllPages();
+            // this.updateAllPages(); // switchPage 会调用 update
         } catch (error) {
             console.error('ERROR calling updateAllPages():', error);
         }
@@ -109,6 +112,13 @@ export class UI {
             });
         }
 
+        const editDashboardBtn = document.getElementById('edit-dashboard-btn');
+        if (editDashboardBtn) {
+            editDashboardBtn.addEventListener('click', () => {
+                this.statusPage.toggleEditMode();
+            });
+        }
+
 
     }
 
@@ -131,6 +141,15 @@ export class UI {
         const fabContainer = document.getElementById('dashboard-fab');
         if (fabContainer) {
             fabContainer.style.display = pageName === 'status' ? 'block' : 'none';
+        }
+
+        const editBtn = document.getElementById('edit-dashboard-btn');
+        if (editBtn) {
+            editBtn.style.display = pageName === 'status' ? 'block' : 'none';
+            // 如果切出状态页，确保退出编辑模式
+            if (pageName !== 'status' && this.statusPage.isEditing) {
+                this.statusPage.toggleEditMode();
+            }
         }
 
         // 延迟执行更新，让导航栏动画完全完成
