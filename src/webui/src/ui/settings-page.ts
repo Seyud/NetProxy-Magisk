@@ -5,6 +5,7 @@ import { I18nService } from '../i18n/i18n-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
 import { UI } from './ui-core.js';
+import Sortable from 'sortablejs';
 
 import logoUrl from '../assets/img/logo.png';
 
@@ -44,6 +45,7 @@ export class SettingsPageManager {
     editingHostKey: string | null;
     proxyKeys: string[];
     draggedIndex: number | null;
+    sortable: Sortable | null;
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -53,6 +55,7 @@ export class SettingsPageManager {
         this.editingServerIndex = -1;
         this.editingHostKey = null;
         this.draggedIndex = null;
+        this.sortable = null;
         this.proxyKeys = [
             'proxy_mobile', 'proxy_wifi', 'proxy_hotspot', 'proxy_usb',
             'proxy_tcp', 'proxy_udp', 'proxy_ipv6'
@@ -246,6 +249,26 @@ export class SettingsPageManager {
                 this.importClashRules();
             });
         }
+
+        // 初始化拖拽排序
+        const listEl = document.getElementById('routing-rules-list');
+        if (listEl) {
+            this.sortable = new Sortable(listEl, {
+                animation: 200,
+                handle: '.drag-handle', // 仅允许通过手柄拖拽
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                forceFallback: true,
+                fallbackClass: 'sortable-drag',
+                fallbackOnBody: true,
+                onEnd: (evt) => {
+                    const { oldIndex, newIndex } = evt;
+                    if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
+                        this.moveRule(oldIndex, newIndex);
+                    }
+                }
+            });
+        }
     }
 
     async loadRoutingRules() {
@@ -276,9 +299,6 @@ export class SettingsPageManager {
         this.routingRules.forEach((rule, index) => {
             const item = document.createElement('mdui-list-item');
             item.setAttribute('data-index', String(index));
-            item.setAttribute('draggable', 'true');
-            item.style.cursor = 'grab';
-
 
             const parts = [];
             if (rule.domain) parts.push(`${I18nService.t('settings.routing.domain')}: ${rule.domain}`);
@@ -294,7 +314,8 @@ export class SettingsPageManager {
             const dragHandle = document.createElement('mdui-icon');
             dragHandle.setAttribute('slot', 'icon');
             dragHandle.setAttribute('name', 'drag_indicator');
-            dragHandle.style.cssText = 'cursor: grab; color: var(--mdui-color-on-surface-variant);';
+            dragHandle.classList.add('drag-handle'); // 添加标识类
+            dragHandle.style.cssText = 'cursor: grab; color: var(--mdui-color-on-surface-variant); touch-action: none;'; // touch-action: none 对 Sortable 很重要
             item.appendChild(dragHandle);
 
             item.setAttribute('headline', rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}`);
@@ -371,102 +392,6 @@ export class SettingsPageManager {
             dropdown.appendChild(menu);
             endContainer.appendChild(dropdown);
             item.appendChild(endContainer);
-
-            // 触摸拖拽事件 (移动端)
-            let touchStartY = 0;
-            let touchCurrentY = 0;
-            let isDragging = false;
-            let dragTimeout = null;
-
-            item.addEventListener('touchstart', (e) => {
-                touchStartY = e.touches[0].clientY;
-                // 长按 300ms 后开始拖拽
-                dragTimeout = setTimeout(() => {
-                    isDragging = true;
-                    item.style.opacity = '0.5';
-                    item.style.background = 'var(--mdui-color-surface-container-highest)';
-                    this.draggedIndex = index;
-                }, 300);
-            }, { passive: true });
-
-            item.addEventListener('touchmove', (e) => {
-                if (!isDragging) {
-                    // 如果移动距离过大，取消长按
-                    const moveY = Math.abs(e.touches[0].clientY - touchStartY);
-                    if (moveY > 10 && dragTimeout) {
-                        clearTimeout(dragTimeout);
-                        dragTimeout = null;
-                    }
-                    return;
-                }
-                e.preventDefault();
-                touchCurrentY = e.touches[0].clientY;
-
-                // 查找目标元素
-                const elements = document.elementsFromPoint(e.touches[0].clientX, e.touches[0].clientY);
-                const targetItem = elements.find(el => el.tagName === 'MDUI-LIST-ITEM' && el !== item);
-
-                // 清除所有指示线
-                listEl.querySelectorAll('mdui-list-item').forEach(el => {
-                    (el as HTMLElement).style.borderTop = '';
-                    (el as HTMLElement).style.borderBottom = '';
-                });
-
-                if (targetItem) {
-                    const targetIndex = parseInt(targetItem.getAttribute('data-index') || '0', 10);
-                    if (targetIndex < index) {
-                        (targetItem as HTMLElement).style.borderTop = '2px solid var(--mdui-color-primary)';
-                    } else {
-                        (targetItem as HTMLElement).style.borderBottom = '2px solid var(--mdui-color-primary)';
-                    }
-                }
-            }, { passive: false });
-
-            item.addEventListener('touchend', async (e) => {
-                if (dragTimeout) {
-                    clearTimeout(dragTimeout);
-                    dragTimeout = null;
-                }
-
-                if (!isDragging) return;
-
-                isDragging = false;
-                item.style.opacity = '1';
-                item.style.background = '';
-
-                // 清除所有指示线
-                listEl.querySelectorAll('mdui-list-item').forEach(el => {
-                    el.style.borderTop = '';
-                    el.style.borderBottom = '';
-                });
-
-                // 查找放置目标
-                const touch = e.changedTouches[0];
-                const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-                const targetItem = elements.find(el => el.tagName === 'MDUI-LIST-ITEM' && el !== item);
-
-                if (targetItem) {
-                    const toIndex = parseInt(targetItem.getAttribute('data-index'), 10);
-                    if (this.draggedIndex !== toIndex) {
-                        await this.moveRule(this.draggedIndex, toIndex);
-                    }
-                }
-                this.draggedIndex = null;
-            });
-
-            item.addEventListener('touchcancel', () => {
-                if (dragTimeout) {
-                    clearTimeout(dragTimeout);
-                    dragTimeout = null;
-                }
-                isDragging = false;
-                item.style.opacity = '1';
-                item.style.background = '';
-                listEl.querySelectorAll('mdui-list-item').forEach(el => {
-                    el.style.borderTop = '';
-                    el.style.borderBottom = '';
-                });
-            });
 
             listEl.appendChild(item);
         });
