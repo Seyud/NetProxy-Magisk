@@ -9,10 +9,22 @@ import { AppPageManager } from './app-page.js';
 import { LogsPageManager } from './logs-page.js';
 import { SettingsPageManager } from './settings-page.js';
 
+interface SkeletonOptions {
+    showIcon?: boolean;
+}
+
 /**
  * UI 核心管理器
  */
 export class UI {
+    currentPage: string;
+    currentTheme: string;
+    statusPage: StatusPageManager;
+    configPage: ConfigPageManager;
+    appPage: AppPageManager;
+    logsPage: LogsPageManager;
+    settingsPage: SettingsPageManager;
+
     constructor() {
         this.currentPage = 'status';
         // 从localStorage读取主题，如果不存在则使用auto
@@ -31,7 +43,7 @@ export class UI {
         this.init();
     }
 
-    init() {
+    init(): void {
         // 初始化多语言服务
         I18nService.init();
 
@@ -66,7 +78,7 @@ export class UI {
         }, 5000);
 
         setTimeout(() => {
-            const latencyBtn = document.getElementById('refresh-latency-btn');
+            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
             if (latencyBtn) {
                 latencyBtn.addEventListener('click', () => {
                     latencyBtn.disabled = true;
@@ -79,7 +91,7 @@ export class UI {
         }, 100);
     }
 
-    initializeMDUI() {
+    initializeMDUI(): void {
         const requiredComponents = ['mdui-layout', 'mdui-top-app-bar', 'mdui-card', 'mdui-button'];
         requiredComponents.forEach(component => {
             if (!customElements.get(component)) {
@@ -88,25 +100,27 @@ export class UI {
         });
     }
 
-    setupNavigation() {
+    setupNavigation(): void {
         const navBar = document.getElementById('nav-bar');
-        navBar.addEventListener('change', (e) => {
-            const pageName = e.target.value;
-            this.switchPage(pageName);
-        });
+        if (navBar) {
+            navBar.addEventListener('change', (e: any) => {
+                const pageName = e.target.value;
+                this.switchPage(pageName);
+            });
+        }
 
         const clearDebugBtn = document.getElementById('clear-debug-btn');
         if (clearDebugBtn) {
             clearDebugBtn.addEventListener('click', () => {
-                if (typeof debugLogger !== 'undefined') {
-                    debugLogger.clear();
+                if (typeof (window as any).debugLogger !== 'undefined') {
+                    (window as any).debugLogger.clear();
                 }
                 toast(I18nService.t('logs.debug_cleared'));
             });
         }
     }
 
-    switchPage(pageName) {
+    switchPage(pageName: string): void {
         // Handle page leave events
         if (this.currentPage === 'logs' && pageName !== 'logs') {
             this.logsPage.onPageLeave();
@@ -115,7 +129,10 @@ export class UI {
         document.querySelectorAll('.page').forEach(page => {
             page.classList.remove('active');
         });
-        document.getElementById(`${pageName}-page`).classList.add('active');
+        const targetPage = document.getElementById(`${pageName}-page`);
+        if (targetPage) {
+            targetPage.classList.add('active');
+        }
         this.currentPage = pageName;
 
         // 更新 FAB 可见性
@@ -131,20 +148,20 @@ export class UI {
             if (pageName === 'config') this.configPage.update();
             if (pageName === 'uid') this.appPage.update();
             if (pageName === 'logs') this.logsPage.update();
-            if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
-                debugLogger.updateUI();
+            if (pageName === 'debug' && typeof (window as any).debugLogger !== 'undefined') {
+                (window as any).debugLogger.updateUI();
             }
         }, 200);
     }
 
-    setupFAB() {
-        const fab = document.getElementById('service-fab');
+    setupFAB(): void {
+        const fab = document.getElementById('service-fab') as any;
         if (!fab) {
             console.warn('FAB element not found');
             return;
         }
 
-        fab.addEventListener('click', async (e) => {
+        fab.addEventListener('click', async (e: MouseEvent) => {
             e.stopPropagation(); // 防止事件冒泡
 
             // 防止重复点击
@@ -172,7 +189,7 @@ export class UI {
                 }
 
                 await this.statusPage.update();
-            } catch (error) {
+            } catch (error: any) {
                 console.error('FAB error:', error);
                 toast(I18nService.t('common.operation_failed') + error.message);
             } finally {
@@ -181,7 +198,7 @@ export class UI {
         });
     }
 
-    setupThemeToggle() {
+    setupThemeToggle(): void {
         const themeBtn = document.getElementById('theme-toggle');
         this.applyTheme(this.currentTheme);
 
@@ -198,7 +215,7 @@ export class UI {
         }
     }
 
-    applyTheme(theme) {
+    applyTheme(theme: string): void {
         const html = document.documentElement;
 
         // 首先移除所有主题类
@@ -208,67 +225,65 @@ export class UI {
         html.classList.add(`mdui-theme-${theme}`);
 
         // 同时调用MDUI的setTheme确保组件内部状态正确
-        setTheme(theme);
+        setTheme(theme as any);
     }
 
-    setupDialogs() {
-        const importMenu = document.getElementById('import-menu');
+    setupDialogs(): void {
+        const importMenu = document.getElementById('import-menu') as any;
 
-        document.getElementById('import-node-link').addEventListener('click', () => {
+        document.getElementById('import-node-link')?.addEventListener('click', () => {
             importMenu.open = false;
-            document.getElementById('node-link-dialog').open = true;
+            (document.getElementById('node-link-dialog') as any).open = true;
         });
 
-        document.getElementById('import-full-config').addEventListener('click', () => {
+        document.getElementById('import-full-config')?.addEventListener('click', () => {
             importMenu.open = false;
             this.showConfigDialog();
         });
 
-        document.getElementById('node-link-cancel').addEventListener('click', () => {
-            document.getElementById('node-link-dialog').open = false;
+        document.getElementById('node-link-cancel')?.addEventListener('click', () => {
+            (document.getElementById('node-link-dialog') as any).open = false;
         });
 
-        document.getElementById('node-link-save').addEventListener('click', async () => {
+        document.getElementById('node-link-save')?.addEventListener('click', async () => {
             await this.configPage.importNodeLink();
         });
 
         // 订阅对话框事件
-        document.getElementById('import-subscription').addEventListener('click', () => {
+        document.getElementById('import-subscription')?.addEventListener('click', () => {
             importMenu.open = false;
-            document.getElementById('subscription-dialog').open = true;
+            (document.getElementById('subscription-dialog') as any).open = true;
         });
 
-        document.getElementById('subscription-cancel').addEventListener('click', () => {
-            document.getElementById('subscription-dialog').open = false;
+        document.getElementById('subscription-cancel')?.addEventListener('click', () => {
+            (document.getElementById('subscription-dialog') as any).open = false;
         });
 
-        document.getElementById('subscription-save').addEventListener('click', async () => {
+        document.getElementById('subscription-save')?.addEventListener('click', async () => {
             await this.configPage.saveSubscription();
         });
 
-        document.getElementById('config-cancel-btn').addEventListener('click', () => {
-            document.getElementById('config-dialog').open = false;
+        document.getElementById('config-cancel-btn')?.addEventListener('click', () => {
+            (document.getElementById('config-dialog') as any).open = false;
         });
 
-        document.getElementById('uid-cancel-btn').addEventListener('click', () => {
-            document.getElementById('uid-dialog').open = false;
+        document.getElementById('uid-cancel-btn')?.addEventListener('click', () => {
+            (document.getElementById('uid-dialog') as any).open = false;
         });
 
-        document.getElementById('config-save-btn').addEventListener('click', async () => {
+        document.getElementById('config-save-btn')?.addEventListener('click', async () => {
             await this.configPage.saveConfig();
         });
 
-        document.getElementById('app-selector-cancel').addEventListener('click', () => {
-            document.getElementById('app-selector-dialog').open = false;
+        document.getElementById('app-selector-cancel')?.addEventListener('click', () => {
+            (document.getElementById('app-selector-dialog') as any).open = false;
         });
 
-        document.getElementById('app-selector-search').addEventListener('input', (e) => {
+        document.getElementById('app-selector-search')?.addEventListener('input', (e: any) => {
             this.appPage.filterApps(e.target.value);
         });
 
-        // Refresh button handlers removed - now using tab-based auto-load
-
-        const checkUpdateBtn = document.getElementById('check-update-btn');
+        const checkUpdateBtn = document.getElementById('check-update-btn') as any;
         if (checkUpdateBtn) {
             checkUpdateBtn.addEventListener('click', () => {
                 checkUpdateBtn.disabled = true;
@@ -276,7 +291,7 @@ export class UI {
 
                 setTimeout(async () => {
                     try {
-                        const result = await SettingsService.updateXray();
+                        const result: any = await SettingsService.updateXray();
 
                         if (result.success) {
                             toast(result.message);
@@ -286,7 +301,7 @@ export class UI {
                         } else {
                             toast(I18nService.t('common.update_failed') + (result.error || result.message));
                         }
-                    } catch (error) {
+                    } catch (error: any) {
                         toast(I18nService.t('common.check_failed') + error.message);
                     } finally {
                         checkUpdateBtn.disabled = false;
@@ -297,7 +312,7 @@ export class UI {
         }
     }
 
-    setupAppSelector() {
+    setupAppSelector(): void {
         try {
             const addAppBtn = document.getElementById('add-uid-btn');
 
@@ -311,9 +326,9 @@ export class UI {
         }
     }
 
-    async confirm(message) {
+    async confirm(message: string): Promise<boolean> {
         return new Promise((resolve) => {
-            const dialog = document.getElementById('confirm-dialog');
+            const dialog = document.getElementById('confirm-dialog') as any;
             const messageEl = document.getElementById('confirm-message');
             const okBtn = document.getElementById('confirm-ok-btn');
             const cancelBtn = document.getElementById('confirm-cancel-btn');
@@ -327,8 +342,8 @@ export class UI {
 
             const newOkBtn = okBtn.cloneNode(true);
             const newCancelBtn = cancelBtn.cloneNode(true);
-            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+            okBtn.parentNode?.replaceChild(newOkBtn, okBtn);
+            cancelBtn.parentNode?.replaceChild(newCancelBtn, cancelBtn);
 
             newOkBtn.addEventListener('click', () => {
                 dialog.open = false;
@@ -351,7 +366,7 @@ export class UI {
      * @param {Object} options - 配置选项
      * @param {boolean} options.showIcon - 是否显示圆形图标占位符（默认 true，适用于应用列表）
      */
-    showSkeleton(container, count = 3, options = {}) {
+    showSkeleton(container: HTMLElement, count = 3, options: SkeletonOptions = {}): void {
         const { showIcon = true } = options;
         container.innerHTML = '';
         for (let i = 0; i < count; i++) {
@@ -380,7 +395,7 @@ export class UI {
         }
     }
 
-    updateAllPages() {
+    updateAllPages(): void {
         try {
             this.statusPage.update();
         } catch (error) {
@@ -388,7 +403,7 @@ export class UI {
         }
     }
 
-    async showConfigDialog(filename = null) {
+    async showConfigDialog(filename: string | null = null): Promise<void> {
         await this.configPage.showDialog(filename);
     }
 }

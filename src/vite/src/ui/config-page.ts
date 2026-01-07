@@ -3,27 +3,59 @@ import { StatusService } from '../services/status-service.js';
 import { ShellService } from '../services/shell-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../i18n/i18n-service.js';
+import { UI } from './ui-core.js';
+
+interface ConfigGroup {
+    name: string;
+    dirName?: string;
+    type?: string;
+    configs: string[];
+}
+
+interface ConfigInfo {
+    protocol: string;
+    address: string;
+    port: string;
+}
+
+interface LatencyCache {
+    latency: number;
+    latencyStr: string;
+}
 
 /**
  * 配置页面管理器 - 支持分组显示
  */
 export class ConfigPageManager {
-    constructor(ui) {
-         this.ui = ui;
-         this.currentOpenDropdown = null;
-         this._tabEventBound = false; // 防止重复绑定 tab 事件
-         this._cachedGroups = null;
-         this._cachedCurrentConfig = null;
-         this._cachedConfigInfos = new Map(); // groupName -> Map<filename>, info
-         this._latencyCache = new Map();
-         this._loadingChunks = new Set(); // 防止并发加载同一 chunk
-         this._selectedTab = null; // 持久化当前选中的 tab
+    ui: UI;
+    currentOpenDropdown: any;
+    _tabEventBound: boolean;
+    _cachedGroups: ConfigGroup[] | null;
+    _cachedCurrentConfig: string | null;
+    _cachedConfigInfos: Map<string, Map<string, ConfigInfo>>;
+    _latencyCache: Map<string, LatencyCache>;
+    _loadingChunks: Set<string>;
+    _selectedTab: string | null;
+    observer: IntersectionObserver;
+    _tabChangeHandler: ((e: Event) => Promise<void>) | null;
+
+    constructor(ui: UI) {
+        this.ui = ui;
+        this.currentOpenDropdown = null;
+        this._tabEventBound = false; // 防止重复绑定 tab 事件
+        this._cachedGroups = null;
+        this._cachedCurrentConfig = null;
+        this._cachedConfigInfos = new Map(); // groupName -> Map<filename>, info
+        this._latencyCache = new Map();
+        this._loadingChunks = new Set(); // 防止并发加载同一 chunk
+        this._selectedTab = null; // 持久化当前选中的 tab
+        this._tabChangeHandler = null;
 
         // 懒加载观察器
         this.observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    const item = entry.target;
+                    const item = entry.target as HTMLElement;
                     const groupName = item.dataset.groupName;
                     const filename = item.dataset.filename;
 
@@ -39,7 +71,7 @@ export class ConfigPageManager {
     /**
      * 从配置内容解析出站信息
      */
-    parseOutboundInfo(content) {
+    parseOutboundInfo(content: string): ConfigInfo {
         try {
             const config = JSON.parse(content);
             const outbounds = config.outbounds || [];
@@ -614,7 +646,7 @@ export class ConfigPageManager {
             let latencyVal = 9999;
 
             const displayStr = latencyStr === 'timeout' ? I18nService.t('config.status.timeout') :
-                              latencyStr === 'failed' ? I18nService.t('config.status.failed') : latencyStr;
+                latencyStr === 'failed' ? I18nService.t('config.status.failed') : latencyStr;
             const ms = parseInt(latencyStr);
             if (!isNaN(ms)) latencyVal = ms;
 
@@ -673,14 +705,14 @@ export class ConfigPageManager {
         if (!group) return;
 
         const infos = this._cachedConfigInfos.get(groupName);
-         if (!infos) return;
+        if (!infos) return;
 
-         // 排序：有延迟的在前（按数值升序），没延迟的在后（保持原序或排最后）
-         group.configs.sort((a, b) => {
-             const latA = this._latencyCache.get(a)?.latency ?? 99999;
-             const latB = this._latencyCache.get(b)?.latency ?? 99999;
-             return latA - latB;
-         });
+        // 排序：有延迟的在前（按数值升序），没延迟的在后（保持原序或排最后）
+        group.configs.sort((a, b) => {
+            const latA = this._latencyCache.get(a)?.latency ?? 99999;
+            const latB = this._latencyCache.get(b)?.latency ?? 99999;
+            return latA - latB;
+        });
 
         toast(I18nService.t('config.toast.sorted'));
         await this.renderActiveTab(groupName);

@@ -1,4 +1,4 @@
-export default {
+const urPK: Record<string, string> = {
     // General
     'app.name': 'NetProxy',
     'common.loading': 'لوڈ ہو رہا ہے...',
@@ -389,3 +389,5 @@ export default {
     'common.check_failed': 'چیک ناکام: ',
     'common.load_failed': 'لوڈ کرنے میں ناکام',
 };
+
+export default urPK;

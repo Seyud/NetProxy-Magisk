@@ -3,12 +3,32 @@ import { I18nService } from '../i18n/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import uPlot from '../libs/uPlot.esm.js';
 import '../libs/uPlot.min.css';
+import { UI } from './ui-core.js';
+
+interface SpeedHistory {
+    time: number[];
+    download: number[];
+    upload: number[];
+}
+
+interface TrafficStats {
+    rx: number;
+    tx: number;
+}
 
 /**
  * 状态页面管理器
  */
 export class StatusPageManager {
-    constructor(ui) {
+    ui: UI;
+    uptimeStartTime: number | null;
+    uptimeInterval: ReturnType<typeof setInterval> | null;
+    speedChart: uPlot | null;
+    speedHistory: SpeedHistory;
+    maxDataPoints: number;
+    trafficStats: TrafficStats;
+
+    constructor(ui: UI) {
         this.ui = ui;
         this.uptimeStartTime = null;
         this.uptimeInterval = null;
@@ -26,17 +46,17 @@ export class StatusPageManager {
         this.trafficStats = { rx: 0, tx: 0 };
     }
 
-    async update() {
+    async update(): Promise<void> {
         try {
             const { status } = await StatusService.getStatus();
 
             // 更新 FAB 按钮状态
-            const fab = document.getElementById('service-fab');
+            const fab = document.getElementById('service-fab') as any;
             const fabContainer = document.getElementById('dashboard-fab');
 
             if (status === 'running') {
-                fab.icon = 'stop';
-                fabContainer.classList.add('running');
+                if (fab) fab.icon = 'stop';
+                if (fabContainer) fabContainer.classList.add('running');
 
                 if (!this.uptimeInterval) {
                     const uptime = await StatusService.getUptime();
@@ -45,9 +65,10 @@ export class StatusPageManager {
                     }
                 }
             } else {
-                fab.icon = 'play_arrow';
-                fabContainer.classList.remove('running');
-                document.getElementById('fab-runtime').textContent = '';
+                if (fab) fab.icon = 'play_arrow';
+                if (fabContainer) fabContainer.classList.remove('running');
+                const fabRuntime = document.getElementById('fab-runtime');
+                if (fabRuntime) fabRuntime.textContent = '';
                 this.stopUptimeTimer();
             }
 
@@ -69,7 +90,7 @@ export class StatusPageManager {
         }
     }
 
-    async updateNetworkSpeed() {
+    async updateNetworkSpeed(): Promise<void> {
         try {
             const speed = await StatusService.getNetworkSpeed();
             const downloadValue = parseFloat(speed.download.replace(' KB/s', '').trim()) || 0;
@@ -78,7 +99,7 @@ export class StatusPageManager {
             // 更新 Header 速度显示
             const headerSpeedEl = document.getElementById('header-speed-text');
             if (headerSpeedEl) {
-                const formatSpeed = (val) => {
+                const formatSpeed = (val: number) => {
                     if (val >= 1024) return `${(val / 1024).toFixed(1)} MB/s`;
                     if (val >= 1) return `${val.toFixed(0)} KB/s`;
                     return `${(val * 1024).toFixed(0)} B/s`;
@@ -116,7 +137,7 @@ export class StatusPageManager {
         }
     }
 
-    async updateIPAndTraffic() {
+    async updateIPAndTraffic(): Promise<void> {
         // 内网 IP
         try {
             const ips = await StatusService.getInternalIP();
@@ -160,9 +181,9 @@ export class StatusPageManager {
                 const { value: downloadValue, unit: downloadUnit } = this.formatTraffic(stats.rx);
 
                 uploadEl.textContent = uploadValue;
-                uploadEl.nextElementSibling.textContent = uploadUnit;
+                if (uploadEl.nextElementSibling) uploadEl.nextElementSibling.textContent = uploadUnit;
                 downloadEl.textContent = downloadValue;
-                downloadEl.nextElementSibling.textContent = downloadUnit;
+                if (downloadEl.nextElementSibling) downloadEl.nextElementSibling.textContent = downloadUnit;
             }
 
             // 更新环形图
@@ -175,7 +196,7 @@ export class StatusPageManager {
         }
     }
 
-    formatTraffic(bytes) {
+    formatTraffic(bytes: number): { value: string; unit: string } {
         if (bytes >= 1024 * 1024 * 1024) {
             return { value: (bytes / 1024 / 1024 / 1024).toFixed(2), unit: 'GB' };
         } else if (bytes >= 1024 * 1024) {
@@ -186,7 +207,7 @@ export class StatusPageManager {
         return { value: bytes.toString(), unit: 'B' };
     }
 
-    updateDonutChart(upload, download) {
+    updateDonutChart(upload: number, download: number): void {
         const container = document.getElementById('traffic-donut');
         if (!container) return;
 
@@ -221,7 +242,7 @@ export class StatusPageManager {
         `;
     }
 
-    initSpeedChart() {
+    initSpeedChart(): void {
         const container = document.getElementById('speed-chart-container');
         if (!container || container.clientWidth === 0) {
             // 容器还没准备好，稍后再试
@@ -242,7 +263,7 @@ export class StatusPageManager {
         this.speedHistory.upload = [0, 0];
 
 
-        const opts = {
+        const opts: any = {
             width: container.clientWidth,
             height: container.clientHeight || 80,
             series: [
@@ -255,7 +276,7 @@ export class StatusPageManager {
                     points: { show: false }, // 隐藏数据点
                     // 填充满底部: 使用极小值确保填充覆盖到图表底部（负值区域）
                     fillTo: -1e9,
-                    fill: (u, seriesIdx) => {
+                    fill: (u: uPlot, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
                         gradient.addColorStop(0, secondaryColor + '60');
                         gradient.addColorStop(1, secondaryColor + '1A');
@@ -269,7 +290,7 @@ export class StatusPageManager {
                     paths: uPlot.paths.spline(),
                     points: { show: false }, // 隐藏数据点
                     fillTo: -1e9,
-                    fill: (u, seriesIdx) => {
+                    fill: (u: uPlot, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
                         gradient.addColorStop(0, primaryColor + '60');
                         gradient.addColorStop(1, primaryColor + '1A');
@@ -288,7 +309,7 @@ export class StatusPageManager {
                 y: {
                     auto: true,
                     // 悬浮效果：将 0 线抬高
-                    range: (u, min, max) => {
+                    range: (u: uPlot, min: number, max: number) => {
                         const effectiveMax = Math.max(max, 100);
                         // 底部负值区域作为"悬浮"支撑
                         return [-effectiveMax * 0.45, effectiveMax];
@@ -312,9 +333,12 @@ export class StatusPageManager {
                 this.speedChart.setSize({ width: container.clientWidth, height: container.clientHeight || 80 });
             }
         });
+
+        // 刷新延迟
+        this.refreshLatency();
     }
 
-    startUptimeTimer(uptimeString) {
+    startUptimeTimer(uptimeString: string): void {
         const parts = uptimeString.split(/[-:]/);
 
         let totalSeconds = 0;
@@ -336,7 +360,7 @@ export class StatusPageManager {
         this.uptimeInterval = setInterval(() => this.updateUptimeDisplay(), 1000);
     }
 
-    stopUptimeTimer() {
+    stopUptimeTimer(): void {
         if (this.uptimeInterval) {
             clearInterval(this.uptimeInterval);
             this.uptimeInterval = null;
@@ -344,7 +368,7 @@ export class StatusPageManager {
         this.uptimeStartTime = null;
     }
 
-    updateUptimeDisplay() {
+    updateUptimeDisplay(): void {
         if (!this.uptimeStartTime) return;
 
         const elapsed = Math.floor((Date.now() - this.uptimeStartTime) / 1000);
@@ -362,14 +386,14 @@ export class StatusPageManager {
     }
 
     // 更新出站模式 UI
-    async updateModeUI() {
+    async updateModeUI(): Promise<void> {
         try {
             const currentMode = await StatusService.getOutboundMode();
 
             // 更新按钮状态
             const modeOptions = document.querySelectorAll('.mode-option');
             modeOptions.forEach(option => {
-                const mode = option.dataset.mode;
+                const mode = (option as HTMLElement).dataset.mode;
                 if (mode === currentMode) {
                     option.classList.add('active');
                 } else {
@@ -388,12 +412,12 @@ export class StatusPageManager {
     }
 
     // 设置模式按钮点击事件
-    setupModeButtons() {
+    setupModeButtons(): void {
         const modeOptions = document.querySelectorAll('.mode-option');
 
         modeOptions.forEach(option => {
             option.addEventListener('click', async () => {
-                const mode = option.dataset.mode;
+                const mode = (option as HTMLElement).dataset.mode!; // Non-null assertion for data set in HTML
 
                 // 避免重复点击
                 if (option.classList.contains('active') || option.classList.contains('loading')) {
@@ -410,7 +434,7 @@ export class StatusPageManager {
                 }
 
                 // 记录当前激活的按钮用于回滚
-                const previousActive = document.querySelector('.mode-option.active');
+                const previousActive = document.querySelector('.mode-option.active') as HTMLElement | null;
 
                 // 立即更新按钮状态
                 modeOptions.forEach(opt => opt.classList.remove('active'));
@@ -428,7 +452,7 @@ export class StatusPageManager {
                         }
                         toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
                     }
-                } catch (error) {
+                } catch (error: any) {
                     console.error('模式切换失败:', error);
                     toast(error.message || '模式切换失败');
                 } finally {
@@ -438,5 +462,45 @@ export class StatusPageManager {
         });
     }
 
+    async refreshLatency(): Promise<void> {
+        try {
+            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
+            if (latencyBtn) {
+                latencyBtn.loading = true;
+                latencyBtn.disabled = true;
+            }
 
+            const latencyEl = document.getElementById('latency-value');
+            if (latencyEl) latencyEl.textContent = '...';
+
+            await new Promise(resolve => setTimeout(resolve, 500)); // 模拟一点延迟感
+
+            // 这里应该调用 StatusService 获取真实延迟 (Google CP)
+            // 暂时用 Google
+            const latency = await import('../services/shell-service.js').then(m => m.ShellService.getPingLatency('google.com'));
+
+            if (latencyEl) {
+                if (latency === 'timeout' || latency === 'failed') {
+                    latencyEl.textContent = 'N/A';
+                    latencyEl.style.color = 'var(--mdui-color-error)';
+                } else {
+                    latencyEl.textContent = latency;
+                    const ms = parseInt(latency);
+                    if (ms < 100) latencyEl.style.color = 'var(--mdui-color-success)';
+                    else if (ms < 200) latencyEl.style.color = 'var(--mdui-color-warning)';
+                    else latencyEl.style.color = 'var(--mdui-color-error)';
+                }
+            }
+
+        } catch (e) {
+            const latencyEl = document.getElementById('latency-value');
+            if (latencyEl) latencyEl.textContent = 'Error';
+        } finally {
+            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
+            if (latencyBtn) {
+                latencyBtn.loading = false;
+                latencyBtn.disabled = false;
+            }
+        }
+    }
 }

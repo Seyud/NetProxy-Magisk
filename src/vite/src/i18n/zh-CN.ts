@@ -1,4 +1,4 @@
-export default {
+const zhCN: Record<string, string> = {
     // General
     'app.name': 'NetProxy',
     'common.loading': '加载中...',
@@ -409,3 +409,5 @@ export default {
     'common.check_failed': '检查失败: ',
     'common.load_failed': '加载失败',
 };
+
+export default zhCN;

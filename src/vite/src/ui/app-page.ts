@@ -1,12 +1,43 @@
 import { AppService } from '../services/app-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../i18n/i18n-service.js';
+import { UI } from './ui-core.js';
+
+interface UserInfo {
+    id: string;
+    name: string;
+}
+
+interface AppInfo {
+    packageName: string;
+    userId: string;
+    appLabel?: string;
+    icon?: string | null;
+}
+
+interface ProxyAppConfig {
+    userId: string;
+    packageName: string;
+    appLabel?: string;
+    icon?: string | null;
+}
 
 /**
  * 代理设置页面管理器
  */
 export class AppPageManager {
-    constructor(ui) {
+    ui: UI;
+    allApps: AppInfo[];
+    proxyMode: string;
+    proxyApps: ProxyAppConfig[];
+    selectedApps: Map<string, AppInfo>;
+    users: UserInfo[];
+    currentUserId: string;
+    showSystemApps: boolean;
+    appProxyEnabled: boolean;
+    isUpdatingUI: boolean;
+
+    constructor(ui: UI) {
         this.ui = ui;
         this.allApps = [];
         this.proxyMode = 'blacklist';
@@ -19,7 +50,7 @@ export class AppPageManager {
         this.isUpdatingUI = false;   // 防止程序更新 UI 触发事件
     }
 
-    async init() {
+    async init(): Promise<void> {
         // 绑定分应用设置（三态：关闭/白名单/黑名单）
         const modeGroup = document.getElementById('app-proxy-mode-group');
         if (modeGroup) {

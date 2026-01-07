@@ -1,6 +1,34 @@
 import { ShellService } from './shell-service.js';
 import { exec } from 'kernelsu';
 
+interface ServiceStatus {
+    status: 'running' | 'stopped' | 'unknown';
+    config: string;
+}
+
+interface NetworkSpeed {
+    download: string;
+    upload: string;
+}
+
+interface TrafficStats {
+    rx: number;
+    tx: number;
+}
+
+interface InternalIP {
+    ip: string;
+    iface: string;
+}
+
+interface XrayRule {
+    type: string;
+    inboundTag?: string[];
+    outboundTag: string;
+    port?: string;
+    [key: string]: unknown;
+}
+
 /**
  * Status Service - 状态页面相关业务逻辑
  */
@@ -8,7 +36,7 @@ export class StatusService {
     // ==================== 服务控制 ====================
 
     // 获取服务状态
-    static async getStatus() {
+    static async getStatus(): Promise<ServiceStatus> {
         try {
             // 使用 pidof 检测 xray 进程是否运行
             const pidOutput = await ShellService.exec(`pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`);
@@ -19,14 +47,14 @@ export class StatusService {
             const configOutput = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/module.conf 2>/dev/null || echo`);
             const config = configOutput.match(/CURRENT_CONFIG="([^"]*)"/)?.[1] || '';
 
-            return { status, config: config.split('/').pop() };
+            return { status, config: config.split('/').pop() || '' };
         } catch (error) {
             return { status: 'unknown', config: '' };
         }
     }
 
     // 启动服务（非阻塞）
-    static async startService() {
+    static async startService(): Promise<boolean> {
         // 后台执行服务脚本，不等待完成
         exec(`su -c "nohup sh ${ShellService.MODULE_PATH}/scripts/core/service.sh start > /dev/null 2>&1 &"`);
         // 轮询等待服务启动
@@ -34,7 +62,7 @@ export class StatusService {
     }
 
     // 停止服务（非阻塞）
-    static async stopService() {
+    static async stopService(): Promise<boolean> {
         // 后台执行服务脚本，不等待完成
         exec(`su -c "nohup sh ${ShellService.MODULE_PATH}/scripts/core/service.sh stop > /dev/null 2>&1 &"`);
         // 轮询等待服务停止
@@ -42,7 +70,7 @@ export class StatusService {
     }
 
     // 轮询服务状态
-    static async pollServiceStatus(targetStatus, timeout) {
+    static async pollServiceStatus(targetStatus: string, timeout: number): Promise<boolean> {
         const start = Date.now();
         const interval = 500; // 每 500ms 检查一次
 
@@ -63,9 +91,9 @@ export class StatusService {
     // ==================== 状态监控 ====================
 
     // 获取服务运行时间
-    static async getUptime() {
+    static async getUptime(): Promise<string> {
         try {
-            const result = await exec(`
+            const result: any = await exec(`
                  pid=$(pidof xray) || exit 1
                  awk 'BEGIN {
                      getline u < "/proc/uptime"; split(u, a, " ")
@@ -84,13 +112,13 @@ export class StatusService {
     }
 
     // 缓存上次网络数据
-    static _lastNetBytes = null;
+    static _lastNetBytes: { rx: number; tx: number } | null = null;
     static _lastNetTime = 0;
 
     // 获取实时网速（无阻塞）
-    static async getNetworkSpeed() {
+    static async getNetworkSpeed(): Promise<NetworkSpeed> {
         try {
-            const result = await exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
+            const result: any = await exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
             if (result.errno !== 0) {
                 return { download: '0 KB/s', upload: '0 KB/s' };
             }
@@ -123,10 +151,10 @@ export class StatusService {
     }
 
     // 获取流量统计 (今日累计)
-    static async getTrafficStats() {
+    static async getTrafficStats(): Promise<TrafficStats> {
         try {
             // 获取所有接口的总流量
-            const result = await exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
+            const result: any = await exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
             if (result.errno !== 0) {
                 return { rx: 0, tx: 0 };
             }
@@ -143,7 +171,7 @@ export class StatusService {
     // ==================== IP 信息 ====================
 
     // 获取内网IP
-    static async getInternalIP() {
+    static async getInternalIP(): Promise<InternalIP[]> {
         try {
             const result = await ShellService.exec(`ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`);
             // 解析格式: "192.168.1.100 wlan0"
@@ -157,7 +185,7 @@ export class StatusService {
     }
 
     // 获取外网IP
-    static async getExternalIP() {
+    static async getExternalIP(): Promise<string | null> {
         try {
             const result = await ShellService.exec(`curl -s --connect-timeout 3 --max-time 5 ip.sb 2>/dev/null`);
             return result.trim() || null;
@@ -169,7 +197,7 @@ export class StatusService {
     // ==================== 出站模式 ====================
 
     // 获取当前出站模式
-    static async getOutboundMode() {
+    static async getOutboundMode(): Promise<string> {
         try {
             const output = await ShellService.exec(`grep '^OUTBOUND_MODE=' ${ShellService.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`);
             return output.trim() || 'rule';
@@ -179,7 +207,7 @@ export class StatusService {
     }
 
     // 设置出站模式
-    static async setOutboundMode(mode) {
+    static async setOutboundMode(mode: string): Promise<boolean> {
         try {
             let rulesFile = '';
 
@@ -208,7 +236,7 @@ export class StatusService {
         }
     }
 
-    static async generateGlobalRules() {
+    static async generateGlobalRules(): Promise<{ routing: { domainStrategy: string; rules: XrayRule[] } }> {
         return {
             routing: {
                 domainStrategy: 'AsIs',
@@ -222,7 +250,7 @@ export class StatusService {
         };
     }
 
-    static async generateDirectRules() {
+    static async generateDirectRules(): Promise<{ routing: { domainStrategy: string; rules: XrayRule[] } }> {
         return {
             routing: {
                 domainStrategy: 'AsIs',

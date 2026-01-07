@@ -1,17 +1,87 @@
 import { ShellService } from './shell-service.js';
 import { exec, spawn } from 'kernelsu';
 
+/** 模块设置接口 */
+export interface ModuleSettings {
+    auto_start: boolean;
+    oneplus_a16_fix: boolean;
+}
+
+/** 代理设置接口 */
+export interface ProxySettings {
+    proxy_mobile: boolean;
+    proxy_wifi: boolean;
+    proxy_hotspot: boolean;
+    proxy_usb: boolean;
+    proxy_tcp: boolean;
+    proxy_udp: boolean;
+    proxy_ipv6: boolean;
+    [key: string]: boolean;
+}
+
+/** DNS 配置接口 */
+export interface DnsConfig {
+    dns: {
+        hosts: Record<string, string | string[]>;
+        servers: (string | DnsServerConfig)[];
+        [key: string]: unknown;
+    };
+}
+
+export interface DnsServerConfig {
+    address: string;
+    port?: number;
+    domains?: string[];
+    [key: string]: unknown;
+}
+
+/** 路由规则接口 */
+export interface RoutingRule {
+    name?: string;
+    type?: string;
+    domain?: string;
+    ip?: string;
+    port?: string;
+    protocol?: string;
+    network?: string;
+    inboundTag?: string;
+    outboundTag?: string;
+    enabled?: boolean;
+}
+
+/** Xray 路由规则 */
+interface XrayRule {
+    type: string;
+    domain?: string[];
+    ip?: string[];
+    port?: string;
+    protocol?: string[];
+    network?: string;
+    inboundTag?: string[];
+    outboundTag: string;
+}
+
+/** 操作结果接口 */
+interface OperationResult {
+    success: boolean;
+    error?: string;
+    path?: string;
+    output?: string;
+    isLatest?: boolean;
+    message?: string;
+}
+
 /**
  * Settings Service - 设置页面相关业务逻辑
  */
 export class SettingsService {
     // ===================== 模块设置 =====================
 
-    // 获取模块设置
-    static async getModuleSettings() {
+    /** 获取模块设置 */
+    static async getModuleSettings(): Promise<ModuleSettings> {
         try {
             const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/module.conf`);
-            const settings = {};
+            const settings: Partial<ModuleSettings> = {};
 
             const autoStartMatch = content.match(/AUTO_START=(\d+)/);
             settings.auto_start = autoStartMatch ? autoStartMatch[1] === '1' : true;
@@ -19,7 +89,7 @@ export class SettingsService {
             const oneplusFixMatch = content.match(/ONEPLUS_A16_FIX=(\d+)/);
             settings.oneplus_a16_fix = oneplusFixMatch ? oneplusFixMatch[1] === '1' : true;
 
-            return settings;
+            return settings as ModuleSettings;
         } catch (error) {
             return {
                 auto_start: true,
@@ -28,8 +98,8 @@ export class SettingsService {
         }
     }
 
-    // 设置模块选项
-    static async setModuleSetting(key, value) {
+    /** 设置模块选项 */
+    static async setModuleSetting(key: string, value: boolean): Promise<OperationResult> {
         const upperKey = key.toUpperCase();
         const numValue = value ? '1' : '0';
         await ShellService.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${ShellService.MODULE_PATH}/config/module.conf`);
@@ -153,15 +223,15 @@ export class SettingsService {
     }
 
     // 应用路由规则（在前端生成 routing.json）
-    static async applyRoutingRules(rules) {
+    static async applyRoutingRules(rules: RoutingRule[]): Promise<OperationResult> {
         try {
             // 构建路由规则数组
-            const xrayRules = [];
+            const xrayRules: XrayRule[] = [];
 
             for (const rule of rules) {
                 if (rule.enabled === false) continue;
 
-                const xrayRule = { type: 'field' };
+                const xrayRule: XrayRule = { type: 'field', outboundTag: rule.outboundTag || 'proxy' };
 
                 // 处理 domain
                 if (rule.domain) {
@@ -193,9 +263,6 @@ export class SettingsService {
                 if (rule.network) {
                     xrayRule.network = rule.network.trim();
                 }
-
-                // 设置 outboundTag
-                xrayRule.outboundTag = rule.outboundTag || 'proxy';
 
                 xrayRules.push(xrayRule);
             }

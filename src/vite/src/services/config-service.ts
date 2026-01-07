@@ -1,6 +1,35 @@
 import { ShellService } from './shell-service.js';
 import { exec } from 'kernelsu';
 
+interface ConfigGroup {
+    type: 'default' | 'subscription';
+    name: string;
+    dirName: string;
+    configs: string[];
+    url?: string;
+    updated?: string;
+}
+
+interface Subscription {
+    name: string;
+    dirName: string;
+    url?: string;
+    updated?: string;
+    nodeCount?: number;
+}
+
+interface ConfigInfo {
+    protocol: string;
+    address: string;
+    port: string;
+}
+
+interface OperationResult {
+    success: boolean;
+    error?: string;
+    output?: string;
+}
+
 /**
  * Config Service - 节点页面相关业务逻辑
  */
@@ -8,9 +37,9 @@ export class ConfigService {
     // ==================== 配置文件管理 ====================
 
     // 获取分组配置
-    static async getConfigGroups() {
+    static async getConfigGroups(): Promise<ConfigGroup[]> {
         // 先获取默认分组
-        const groups = [];
+        const groups: ConfigGroup[] = [];
         const outboundsDir = `${ShellService.MODULE_PATH}/config/xray/outbounds`;
 
         try {
@@ -46,12 +75,12 @@ export class ConfigService {
     }
 
     // 读取配置文件（从 outbounds 目录）
-    static async readConfig(filename) {
+    static async readConfig(filename: string): Promise<string> {
         return await ShellService.exec(`cat '${ShellService.MODULE_PATH}/config/xray/outbounds/${filename}'`);
     }
 
     // 批量读取多个配置文件的基本信息
-    static async batchReadConfigInfos(filePaths) {
+    static async batchReadConfigInfos(filePaths: string[]): Promise<Map<string, ConfigInfo>> {
         if (!filePaths || filePaths.length === 0) return new Map();
 
         const basePath = `${ShellService.MODULE_PATH}/config/xray/outbounds`;
@@ -69,7 +98,7 @@ EOF
 
         if (!result) return new Map();
 
-        const infoMap = new Map();
+        const infoMap = new Map<string, ConfigInfo>();
         const blocks = result.split('===FILE:').filter(b => b.trim());
 
         for (const block of blocks) {
@@ -92,24 +121,24 @@ EOF
     }
 
     // 保存配置文件
-    static async saveConfig(filename, content) {
+    static async saveConfig(filename: string, content: string): Promise<void> {
         const escaped = content.replace(/'/g, "'\\''");
         await ShellService.exec(`echo '${escaped}' > '${ShellService.MODULE_PATH}/config/xray/outbounds/${filename}'`);
     }
 
     // 删除配置文件
-    static async deleteConfig(filename) {
+    static async deleteConfig(filename: string): Promise<OperationResult> {
         try {
             const cmd = `su -c "rm '${ShellService.MODULE_PATH}/config/xray/outbounds/${filename}'"`;
             await exec(cmd);
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             return { success: false, error: error.message };
         }
     }
 
     // 切换配置（支持热切换）
-    static async switchConfig(filename) {
+    static async switchConfig(filename: string): Promise<void> {
         const configPath = `${ShellService.MODULE_PATH}/config/xray/outbounds/${filename}`;
 
         // 需要检查服务状态来决定是热切换还是直接修改配置
@@ -119,7 +148,7 @@ EOF
         const isRunning = pidOutput.trim() !== '';
 
         if (isRunning) {
-            const result = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/core/switch-config.sh '${configPath}'"`);
+            const result: any = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/core/switch-config.sh '${configPath}'"`);
             if (result.errno !== 0) {
                 throw new Error(result.stderr || '热切换失败');
             }
@@ -129,18 +158,18 @@ EOF
     }
 
     // 从节点链接导入
-    static async importFromNodeLink(nodeLink) {
+    static async importFromNodeLink(nodeLink: string): Promise<OperationResult> {
         try {
             const escapedLink = nodeLink.replace(/'/g, "'\\''");
             const cmd = `su -c "cd '${ShellService.MODULE_PATH}/config/xray/outbounds' && chmod +x '${ShellService.MODULE_PATH}/bin/proxylink' && '${ShellService.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto"`;
-            const result = await exec(cmd);
+            const result: any = await exec(cmd);
 
             if (result.errno === 0) {
                 return { success: true, output: result.stdout };
             } else {
                 return { success: false, error: result.stderr || 'Import failed' };
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error('Import from node link error:', error);
             return { success: false, error: error.message };
         }
@@ -148,10 +177,10 @@ EOF
 
     // ==================== 订阅管理 ====================
 
-    static async getSubscriptions() {
+    static async getSubscriptions(): Promise<Subscription[]> {
         try {
             const result = await ShellService.exec(`find ${ShellService.MODULE_PATH}/config/xray/outbounds -mindepth 1 -maxdepth 1 -type d -name 'sub_*' -exec basename {} \\;`);
-            const subscriptions = [];
+            const subscriptions: Subscription[] = [];
 
             for (const dir of result.split('\n').filter(d => d)) {
                 const name = dir.replace(/^sub_/, '');
@@ -174,35 +203,35 @@ EOF
         }
     }
 
-    static async addSubscription(name, url) {
+    static async addSubscription(name: string, url: string): Promise<OperationResult> {
         const statusFile = `${ShellService.MODULE_PATH}/config/.sub_status`;
         await ShellService.exec(`rm -f ${statusFile}`);
         await exec(`su -c "nohup sh -c 'sh ${ShellService.MODULE_PATH}/scripts/config/subscription.sh add \\"${name}\\" \\"${url}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
         return await this.waitForSubscriptionComplete(statusFile, 60000);
     }
 
-    static async updateSubscription(name) {
+    static async updateSubscription(name: string): Promise<OperationResult> {
         const statusFile = `${ShellService.MODULE_PATH}/config/.sub_status`;
         await ShellService.exec(`rm -f ${statusFile}`);
         await exec(`su -c "nohup sh -c 'sh ${ShellService.MODULE_PATH}/scripts/config/subscription.sh update \\"${name}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
         return await this.waitForSubscriptionComplete(statusFile, 60000);
     }
 
-    static async removeSubscription(name) {
-        const result = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/config/subscription.sh remove '${name}'"`);
+    static async removeSubscription(name: string): Promise<OperationResult> {
+        const result: any = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/config/subscription.sh remove '${name}'"`);
         if (result.errno !== 0) {
             throw new Error(result.stderr || '删除订阅失败');
         }
         return { success: true };
     }
 
-    static async waitForSubscriptionComplete(statusFile, timeout) {
+    static async waitForSubscriptionComplete(statusFile: string, timeout: number): Promise<OperationResult> {
         const startTime = Date.now();
         const pollInterval = 500;
 
         while (Date.now() - startTime < timeout) {
             await new Promise(resolve => setTimeout(resolve, pollInterval));
-            const result = await exec(`cat ${statusFile} 2>/dev/null || echo ""`);
+            const result: any = await exec(`cat ${statusFile} 2>/dev/null || echo ""`);
             const status = (result.stdout || '').trim();
 
             if (status === 'success') {

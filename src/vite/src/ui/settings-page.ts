@@ -4,16 +4,55 @@ import { ShellService } from '../services/shell-service.js';
 import { I18nService } from '../i18n/i18n-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
+import { UI } from './ui-core.js';
+
 const logoUrl = 'https://ghfast.top/https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/image/logo.png';
 
+interface RoutingRule {
+    name?: string;
+    type: string;
+    domain?: string;
+    ip?: string;
+    port?: string;
+    protocol?: string;
+    network?: string;
+    outboundTag: string;
+    enabled: boolean;
+}
+
+interface DnsServer {
+    address: string;
+    domains?: string[];
+    expectIPs?: string[];
+    skipFallback?: boolean;
+    tag?: string;
+}
+
+interface DnsConfig {
+    dns: {
+        hosts: Record<string, string | string[]>;
+        servers: (string | DnsServer)[];
+    };
+}
+
 export class SettingsPageManager {
-    constructor(ui) {
+    ui: UI;
+    routingRules: RoutingRule[];
+    editingRuleIndex: number;
+    dnsConfig: DnsConfig;
+    editingServerIndex: number;
+    editingHostKey: string | null;
+    proxyKeys: string[];
+    draggedIndex: number | null;
+
+    constructor(ui: UI) {
         this.ui = ui;
         this.routingRules = [];
         this.editingRuleIndex = -1;
         this.dnsConfig = { dns: { hosts: {}, servers: [] } };
         this.editingServerIndex = -1;
         this.editingHostKey = null;
+        this.draggedIndex = null;
         this.proxyKeys = [
             'proxy_mobile', 'proxy_wifi', 'proxy_hotspot', 'proxy_usb',
             'proxy_tcp', 'proxy_udp', 'proxy_ipv6'
@@ -27,7 +66,7 @@ export class SettingsPageManager {
         this.applyStoredTheme();
     }
 
-    setupEventListeners() {
+    setupEventListeners(): void {
         // 日志入口
         const logsEntry = document.getElementById('settings-logs-entry');
         if (logsEntry) {

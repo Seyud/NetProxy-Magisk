@@ -1,6 +1,28 @@
 import { exec, spawn } from 'kernelsu';
 import { toast } from '../utils/toast.js';
 
+/** Shell 执行选项 */
+interface ExecOptions {
+    silent?: boolean;
+    [key: string]: unknown;
+}
+
+/** Shell 执行结果 */
+interface ExecResult {
+    errno: number;
+    stdout: string;
+    stderr: string;
+}
+
+/** Spawn 进程类型 */
+interface SpawnProcess {
+    stdout: {
+        on(event: 'data', callback: (data: string) => void): void;
+    };
+    on(event: 'exit', callback: (code: number) => void): void;
+    on(event: 'error', callback: (error: Error) => void): void;
+}
+
 /**
  * KernelSU Shell Service - 封装底层 Shell 交互
  */
@@ -9,13 +31,10 @@ export class ShellService {
 
     /**
      * 执行 Shell 命令
-     * @param {string} command 命令
-     * @param {object} options 选项
-     * @returns {Promise<string>} stdout
      */
-    static async exec(command, options = {}) {
+    static async exec(command: string, options: ExecOptions = {}): Promise<string> {
         try {
-            const { errno, stdout, stderr } = await exec(command, options);
+            const { errno, stdout, stderr } = await exec(command, options) as ExecResult;
             if (errno !== 0) {
                 throw new Error(stderr || 'Command execution failed');
             }
@@ -32,10 +51,8 @@ export class ShellService {
 
     /**
      * 使用 curl 获取 URL 内容
-     * @param {string} url 
-     * @returns {Promise<string|null>}
      */
-    static async fetchUrl(url) {
+    static async fetchUrl(url: string): Promise<string | null> {
         try {
             const result = await this.exec(`curl -sL --connect-timeout 10 --max-time 30 '${url}'`);
             return result.trim();
@@ -45,8 +62,10 @@ export class ShellService {
         }
     }
 
-    // 获取ping延迟（使用 spawn 真正非阻塞）
-    static getPingLatency(host) {
+    /**
+     * 获取 ping 延迟（使用 spawn 真正非阻塞）
+     */
+    static getPingLatency(host: string): Promise<string> {
         return new Promise((resolve) => {
             let output = '';
             let resolved = false;
@@ -60,13 +79,13 @@ export class ShellService {
             }, 3000);
 
             try {
-                const ping = spawn('ping', ['-c', '1', '-W', '2', host]);
+                const ping = spawn('ping', ['-c', '1', '-W', '2', host]) as SpawnProcess;
 
-                ping.stdout.on('data', (data) => {
+                ping.stdout.on('data', (data: string) => {
                     output += data;
                 });
 
-                ping.on('exit', (code) => {
+                ping.on('exit', (code: number) => {
                     if (resolved) return;
                     resolved = true;
                     clearTimeout(timeout);

@@ -2,27 +2,39 @@ import zhCN from './zh-CN.js';
 import enUS from './en-US.js';
 import urPK from './ur-PK.js';
 
+/** Language dictionary type - maps translation keys to translated strings */
+export type LanguageDictionary = Record<string, string>;
+
+/** Supported language codes */
+export type SupportedLanguage = 'zh-CN' | 'en-US' | 'ur-PK';
+
+/** All available language resources */
+export type LanguageResources = Record<SupportedLanguage, LanguageDictionary>;
+
+/** Translation parameters for string interpolation */
+export type TranslationParams = Record<string, string | number>;
+
 /**
  * I18nService - Internationalization Service
  * Handles language switching, translation lookup, and persistence.
  */
 export class I18nService {
-    static STORAGE_KEY = 'language';
-    static DEFAULT_LANG = 'zh-CN'; // Default fallback
-    static currentLang = 'zh-CN';
+    static STORAGE_KEY: string = 'language';
+    static DEFAULT_LANG: SupportedLanguage = 'zh-CN'; // Default fallback
+    static currentLang: SupportedLanguage = 'zh-CN';
 
     // Translation Resources
-    static resources = {
-        'zh-CN': zhCN,
-        'en-US': enUS,
-        'ur-PK': urPK
+    static resources: LanguageResources = {
+        'zh-CN': zhCN as LanguageDictionary,
+        'en-US': enUS as LanguageDictionary,
+        'ur-PK': urPK as LanguageDictionary
     };
 
     // Initialize
-    static init() {
+    static init(): void {
         const savedLang = localStorage.getItem(this.STORAGE_KEY);
-        if (savedLang && this.resources[savedLang]) {
-            this.currentLang = savedLang;
+        if (savedLang && this.resources[savedLang as SupportedLanguage]) {
+            this.currentLang = savedLang as SupportedLanguage;
         } else {
             // Auto detect
             const navLang = navigator.language;
@@ -37,36 +49,36 @@ export class I18nService {
     }
 
     // Set Language
-    static setLanguage(lang) {
+    static setLanguage(lang: string): void {
         if (lang === 'auto') {
             localStorage.removeItem(this.STORAGE_KEY);
             this.init(); // Re-detect
-        } else if (this.resources[lang]) {
-            this.currentLang = lang;
+        } else if (this.resources[lang as SupportedLanguage]) {
+            this.currentLang = lang as SupportedLanguage;
             localStorage.setItem(this.STORAGE_KEY, lang);
             document.documentElement.lang = lang;
             this.applyLanguage();
         }
     }
 
-    static getLanguage() {
+    static getLanguage(): string {
         return localStorage.getItem(this.STORAGE_KEY) || 'auto';
     }
 
     // Translate
-    static t(key, params = {}) {
+    static t(key: string, params: TranslationParams = {}): string {
         const dict = this.resources[this.currentLang] || this.resources[this.DEFAULT_LANG];
         let text = dict[key] || key;
 
         // Replace params: {name} -> value
         for (const [k, v] of Object.entries(params)) {
-            text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+            text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
         }
         return text;
     }
 
     // Apply translation to all [data-i18n] elements
-    static applyLanguage() {
+    static applyLanguage(): void {
         // Set directionality
         if (this.currentLang === 'ur-PK') {
             document.documentElement.dir = 'rtl';

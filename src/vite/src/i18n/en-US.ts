@@ -1,4 +1,4 @@
-export default {
+const enUS: Record<string, string> = {
     // General
     'app.name': 'NetProxy',
     'common.loading': 'Loading...',
@@ -409,3 +409,5 @@ export default {
     'common.check_failed': 'Check failed: ',
     'common.load_failed': 'Failed to load',
 };
+
+export default enUS;
