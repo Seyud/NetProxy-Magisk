@@ -202,6 +202,11 @@ check_kernel_feature() {
         return 0
     fi
 
+    if [ "$SKIP_CHECK_FEATURE" = "1" ]; then
+        log Debug "已跳过内核特性检查"
+        return 0
+    fi
+
     local feature="$1"
     local config_name="CONFIG_${feature}"
 
@@ -1143,6 +1148,7 @@ start_proxy() {
         fi
     fi
     log Info "代理设置完成"
+    block_loopback_traffic enable
 }
 
 stop_proxy() {
@@ -1164,6 +1170,23 @@ stop_proxy() {
     fi
     cleanup_ipset
     log Info "代理已停止"
+    block_loopback_traffic disable
+}
+
+# 阻止本地访问 tproxy 端口的流量回环
+block_loopback_traffic() {
+    case "$1" in
+        enable)
+            ip6tables -t filter -A OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT
+            iptables -t filter -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT
+            log Info "已启用本地回环流量阻止"
+            ;;
+        disable)
+            ip6tables -t filter -D OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2>/dev/null || true
+            iptables -t filter -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2>/dev/null || true
+            log Info "已禁用本地回环流量阻止"
+            ;;
+    esac
 }
 
 show_usage() {
