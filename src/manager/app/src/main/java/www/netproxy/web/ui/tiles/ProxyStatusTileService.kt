@@ -17,10 +17,8 @@ class ProxyStatusTileService : TileService() {
     companion object {
         /** Xray 可执行文件路径 */
         private const val XRAY_BIN = "/data/adb/modules/netproxy/bin/xray"
-        /** 启动脚本路径 */
-        private const val START_SCRIPT = "/data/adb/modules/netproxy/scripts/core/start.sh"
-        /** 停止脚本路径 */
-        private const val STOP_SCRIPT = "/data/adb/modules/netproxy/scripts/core/stop.sh"
+        /** 服务管理脚本路径 */
+        private const val SERVICE_SCRIPT = "/data/adb/modules/netproxy/scripts/core/service.sh"
     }
     
     override fun onStartListening() {
@@ -39,13 +37,13 @@ class ProxyStatusTileService : TileService() {
         
         if (isRunning) {
             // 当前运行中，执行停止
-            Shell.cmd(STOP_SCRIPT).submit { 
+            Shell.cmd("$SERVICE_SCRIPT stop").submit { 
                 // 脚本执行完成后再次检查状态以确保一致性
                 updateTileState()
             }
         } else {
             // 当前已停止，执行启动
-            Shell.cmd(START_SCRIPT).submit {
+            Shell.cmd("$SERVICE_SCRIPT start").submit {
                 updateTileState()
             }
         }
