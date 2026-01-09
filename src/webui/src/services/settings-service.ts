@@ -1,5 +1,4 @@
-import { ShellService } from './ksu.js';
-import { exec, spawn } from 'kernelsu';
+import { KSU } from './ksu.js';
 
 /** 模块设置接口 */
 export interface ModuleSettings {
@@ -80,7 +79,7 @@ export class SettingsService {
     /** 获取模块设置 */
     static async getModuleSettings(): Promise<ModuleSettings> {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/module.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/module.conf`);
             const settings: Partial<ModuleSettings> = {};
 
             const autoStartMatch = content.match(/AUTO_START=(\d+)/);
@@ -102,19 +101,19 @@ export class SettingsService {
     static async setModuleSetting(key: string, value: boolean): Promise<OperationResult> {
         const upperKey = key.toUpperCase();
         const numValue = value ? '1' : '0';
-        await ShellService.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${ShellService.MODULE_PATH}/config/module.conf`);
+        await KSU.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/module.conf`);
         return { success: true };
     }
 
     // 执行 OnePlus A16 兼容性修复脚本
     static async executeOneplusFix() {
-        await ShellService.exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/utils/oneplus_a16_fix.sh"`);
+        await KSU.exec(`su -c "sh ${KSU.MODULE_PATH}/scripts/utils/oneplus_a16_fix.sh"`);
         return { success: true };
     }
 
     // 打开外部浏览器
     static async openExternalUrl(url) {
-        await exec(`am start -a android.intent.action.VIEW -d "${url}"`);
+        await KSU.exec(`am start -a android.intent.action.VIEW -d "${url}"`);
     }
 
     // ===================== 代理开关设置 =====================
@@ -122,7 +121,7 @@ export class SettingsService {
     // 获取代理开关设置
     static async getProxySettings() {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             const settings = {};
             const keys = ['PROXY_MOBILE', 'PROXY_WIFI', 'PROXY_HOTSPOT', 'PROXY_USB', 'PROXY_TCP', 'PROXY_UDP', 'PROXY_IPV6'];
 
@@ -148,14 +147,14 @@ export class SettingsService {
     static async setProxySetting(key, value) {
         const upperKey = key.toUpperCase();
         const numValue = value ? '1' : '0';
-        await ShellService.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
         return { success: true };
     }
 
     // 获取代理模式 (0=自动, 1=TPROXY, 2=REDIRECT)
     static async getProxyMode() {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             const match = content.match(/PROXY_MODE=(\d+)/);
             return match ? parseInt(match[1]) : 0;
         } catch (error) {
@@ -165,7 +164,7 @@ export class SettingsService {
 
     // 设置代理模式
     static async setProxyMode(value) {
-        await ShellService.exec(`sed -i 's/^PROXY_MODE=.*/PROXY_MODE=${value}/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/^PROXY_MODE=.*/PROXY_MODE=${value}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
         return { success: true };
     }
 
@@ -174,7 +173,7 @@ export class SettingsService {
     // 获取 DNS 配置
     static async getDnsConfig() {
         try {
-            const output = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/xray/confdir/02_dns.json`);
+            const output = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/xray/confdir/02_dns.json`);
             return JSON.parse(output);
         } catch (error) {
             console.error('获取 DNS 配置失败:', error);
@@ -187,7 +186,7 @@ export class SettingsService {
         try {
             const json = JSON.stringify(config, null, 4);
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/xray/confdir/02_dns.json`);
+            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/02_dns.json`);
             return { success: true };
         } catch (error: any) {
             console.error('保存 DNS 配置失败:', error);
@@ -200,7 +199,7 @@ export class SettingsService {
     // 获取路由规则列表
     static async getRoutingRules() {
         try {
-            const output = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/routing_rules.json`);
+            const output = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/routing_rules.json`);
             return JSON.parse(output);
         } catch (error) {
             console.error('获取路由规则失败:', error);
@@ -214,7 +213,7 @@ export class SettingsService {
             const json = JSON.stringify(rules, null, 4);
             // 使用 base64 编码避免特殊字符问题
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/routing_rules.json`);
+            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/routing_rules.json`);
             return { success: true };
         } catch (error: any) {
             console.error('保存路由规则失败:', error);
@@ -290,7 +289,7 @@ export class SettingsService {
             // 使用 base64 编码写入文件
             const json = JSON.stringify(routingConfig, null, 4);
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/xray/confdir/03_routing.json`);
+            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/03_routing.json`);
 
             return { success: true };
         } catch (error: any) {
@@ -310,10 +309,10 @@ export class SettingsService {
             const outputPath = `${downloadPath}/${filename}`;
 
             // 确保 Download 目录存在
-            await ShellService.exec(`mkdir -p ${downloadPath}`);
+            await KSU.exec(`mkdir -p ${downloadPath}`);
 
             // 使用 tar 压缩 logs 文件夹
-            await ShellService.exec(`cd ${ShellService.MODULE_PATH} && tar -czf ${outputPath} logs/`);
+            await KSU.exec(`cd ${KSU.MODULE_PATH} && tar -czf ${outputPath} logs/`);
 
             return { success: true, path: outputPath };
         } catch (error: any) {
@@ -331,10 +330,10 @@ export class SettingsService {
             const outputPath = `${downloadPath}/${filename}`;
 
             // 确保 Download 目录存在
-            await ShellService.exec(`mkdir -p ${downloadPath}`);
+            await KSU.exec(`mkdir -p ${downloadPath}`);
 
             // 使用 tar 同时压缩 logs 和 config 文件夹
-            await ShellService.exec(`cd ${ShellService.MODULE_PATH} && tar -czf ${outputPath} logs/ config/`);
+            await KSU.exec(`cd ${KSU.MODULE_PATH} && tar -czf ${outputPath} logs/ config/`);
 
             return { success: true, path: outputPath };
         } catch (error: any) {
@@ -343,15 +342,11 @@ export class SettingsService {
         }
     }
 
-    // 获取 Xray 版本号
     static async getXrayVersion() {
         try {
-            const result = await exec(`${ShellService.MODULE_PATH}/bin/xray version`);
-            if (result.errno === 0) {
-                const match = result.stdout.match(/Xray\s+([\d.]+)/);
-                return match ? match[1] : 'unknown';
-            }
-            return 'unknown';
+            const result = await KSU.exec(`${KSU.MODULE_PATH}/bin/xray version`);
+            const match = result.match(/Xray\s+([\d.]+)/);
+            return match ? match[1] : 'unknown';
         } catch (error) {
             console.error('Failed to get Xray version:', error);
             return 'unknown';
@@ -371,7 +366,7 @@ export class SettingsService {
             }, 60000);
 
             try {
-                const sh = spawn('su', ['-c', `sh ${ShellService.MODULE_PATH}/scripts/utils/update-xray.sh`]);
+                const sh = KSU.spawn('sh', [`${KSU.MODULE_PATH}/scripts/utils/update-xray.sh`]);
 
                 sh.stdout.on('data', (data) => output += data);
                 sh.stderr.on('data', (data) => output += data);
@@ -413,7 +408,7 @@ export class SettingsService {
     // 获取日志
     static async getServiceLog(lines = 100) {
         try {
-            return await ShellService.exec(`tail -n ${lines} ${ShellService.MODULE_PATH}/logs/service.log`);
+            return await KSU.exec(`tail -n ${lines} ${KSU.MODULE_PATH}/logs/service.log`);
         } catch (error) {
             return '暂无日志';
         }
@@ -421,7 +416,7 @@ export class SettingsService {
 
     static async getXrayLog(lines = 100) {
         try {
-            return await ShellService.exec(`tail -n ${lines} ${ShellService.MODULE_PATH}/logs/xray.log`);
+            return await KSU.exec(`tail -n ${lines} ${KSU.MODULE_PATH}/logs/xray.log`);
         } catch (error) {
             return '暂无日志';
         }
@@ -429,17 +424,16 @@ export class SettingsService {
 
     static async getTproxyLog(lines = 100) {
         try {
-            return await ShellService.exec(`tail -n ${lines} ${ShellService.MODULE_PATH}/logs/tproxy.log`);
+            return await KSU.exec(`tail -n ${lines} ${KSU.MODULE_PATH}/logs/tproxy.log`);
         } catch (error) {
             return '暂无日志';
         }
     }
 
-    // 刷新 TProxy 规则
     static async renewTProxy() {
         try {
-            const result = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/network/tproxy.sh restart"`);
-            return { success: result.errno === 0, output: result.stdout };
+            await KSU.exec(`sh ${KSU.MODULE_PATH}/scripts/network/tproxy.sh restart`);
+            return { success: true };
         } catch (error: any) {
             return { success: false, error: error.message };
         }

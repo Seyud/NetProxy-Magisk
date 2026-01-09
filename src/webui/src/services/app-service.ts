@@ -1,5 +1,4 @@
-import { ShellService } from './ksu.js';
-import { getPackagesInfo } from 'kernelsu';
+import { KSU } from './ksu.js';
 
 interface UserInfo {
     id: string;
@@ -25,7 +24,7 @@ export class AppService {
     // 获取分应用代理模式
     static async getAppProxyMode(): Promise<string> {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             const match = content.match(/^APP_PROXY_MODE="?(\w+)"?/m);
             return match ? match[1] : 'blacklist';
         } catch (error) {
@@ -35,13 +34,13 @@ export class AppService {
 
     // 设置分应用代理模式
     static async setAppProxyMode(mode: string): Promise<void> {
-        await ShellService.exec(`sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
     }
 
     // 获取分应用代理启用状态
     static async getAppProxyEnabled(): Promise<boolean> {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             // APP_PROXY_ENABLE=1 or 0
             const match = content.match(/^APP_PROXY_ENABLE=(\d+)/m);
             return match ? match[1] === '1' : true; // 默认启用? 假设
@@ -53,13 +52,13 @@ export class AppService {
     // 设置分应用代理启用状态
     static async setAppProxyEnabled(enabled: boolean): Promise<void> {
         const val = enabled ? '1' : '0';
-        await ShellService.exec(`sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
     }
 
     // 获取已安装应用列表
     static async getUsers(): Promise<UserInfo[]> {
         try {
-            const output = await ShellService.exec('pm list users');
+            const output = await KSU.exec('pm list users');
             const users: UserInfo[] = [];
             // Output format:
             // Users:
@@ -91,7 +90,7 @@ export class AppService {
         const cmd = `pm list packages --user ${userId} ${filter}`;
 
         try {
-            const output = await ShellService.exec(cmd);
+            const output = await KSU.exec(cmd);
             const lines = output.split('\n');
             const apps: AppInfo[] = [];
 
@@ -122,7 +121,7 @@ export class AppService {
 
         for (let attempt = 0; attempt < retries; attempt++) {
             try {
-                const infos = await getPackagesInfo(uniquePkgs);
+                const infos = KSU.getPackagesInfo(uniquePkgs);
 
                 // 检查是否获取到有效数据
                 if (!infos || infos.length === 0) {
@@ -164,7 +163,7 @@ export class AppService {
     // 获取代理应用列表
     static async getProxyApps(): Promise<ProxyAppConfig[]> {
         try {
-            const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+            const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
 
             // 黑名单模式用 BYPASS_APPS_LIST，白名单模式用 PROXY_APPS_LIST
@@ -189,7 +188,7 @@ export class AppService {
 
     // 添加代理应用
     static async addProxyApp(packageName: string, userId = '0'): Promise<void> {
-        const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
         const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
         const listKey = mode === 'blacklist' ? 'BYPASS_APPS_LIST' : 'PROXY_APPS_LIST';
         const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
@@ -202,12 +201,12 @@ export class AppService {
         }
 
         const newList = currentList.length > 0 ? `${currentListStr} ${newItem}` : newItem;
-        await ShellService.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
     }
 
     // 删除代理应用
     static async removeProxyApp(packageName: string, userId = '0'): Promise<void> {
-        const content = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
         const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
         const listKey = mode === 'blacklist' ? 'BYPASS_APPS_LIST' : 'PROXY_APPS_LIST';
         const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
@@ -222,6 +221,6 @@ export class AppService {
             return item !== targetItem;
         }).join(' ');
 
-        await ShellService.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${ShellService.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
     }
 }
