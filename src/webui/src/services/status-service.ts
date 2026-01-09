@@ -1,4 +1,4 @@
-import { KSU, ShellService, ChildProcess } from './ksu.js';
+import { KSU, ChildProcess } from './ksu.js';
 
 interface ServiceStatus {
     status: 'running' | 'stopped' | 'unknown';
@@ -38,12 +38,12 @@ export class StatusService {
     static async getStatus(): Promise<ServiceStatus> {
         try {
             // 使用 pidof 检测 xray 进程是否运行
-            const pidOutput = await ShellService.exec(`pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`);
+            const pidOutput = await KSU.exec(`pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`);
             const isRunning = pidOutput.trim() !== '';
             const status = isRunning ? 'running' : 'stopped';
 
             // config 从 module.conf 读取
-            const configOutput = await ShellService.exec(`cat ${ShellService.MODULE_PATH}/config/module.conf 2>/dev/null || echo`);
+            const configOutput = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null || echo`);
             const config = configOutput.match(/CURRENT_CONFIG="([^"]*)"/)?.[1] || '';
 
             return { status, config: config.split('/').pop() || '' };
@@ -173,7 +173,7 @@ export class StatusService {
         try {
             // 1. 获取 PID
             const pidArg = `/data/adb/modules/netproxy/bin/xray`;
-            const pidResult = await ShellService.exec(`pidof -s ${pidArg} 2>/dev/null || echo`);
+            const pidResult = await KSU.exec(`pidof -s ${pidArg} 2>/dev/null || echo`);
             const pid = pidResult.trim();
 
             if (!pid) {
@@ -181,7 +181,7 @@ export class StatusService {
             }
 
             // 2. 获取内存 (VmRSS)
-            const statusResult = await ShellService.exec(`grep VmRSS /proc/${pid}/status 2>/dev/null`);
+            const statusResult = await KSU.exec(`grep VmRSS /proc/${pid}/status 2>/dev/null`);
             let memUsed = 0; // Bytes
             if (statusResult) {
                 const match = statusResult.match(/VmRSS:\s+(\d+)\s+kB/);
@@ -191,7 +191,7 @@ export class StatusService {
             }
 
             // 获取总内存 (用于计算百分比)
-            const memInfoResult = await ShellService.exec(`grep MemTotal /proc/meminfo 2>/dev/null`);
+            const memInfoResult = await KSU.exec(`grep MemTotal /proc/meminfo 2>/dev/null`);
             let memTotal = 0;
             if (memInfoResult) {
                 const match = memInfoResult.match(/MemTotal:\s+(\d+)\s+kB/);
@@ -209,8 +209,8 @@ export class StatusService {
                 TotalSystemCPU = sum(fields) (from /proc/stat)
             */
             let cpuUsage = 0;
-            const procStatRaw = await ShellService.exec(`cat /proc/${pid}/stat 2>/dev/null`);
-            const sysStatRaw = await ShellService.exec(`cat /proc/stat | head -n 1`);
+            const procStatRaw = await KSU.exec(`cat /proc/${pid}/stat 2>/dev/null`);
+            const sysStatRaw = await KSU.exec(`cat /proc/stat | head -n 1`);
 
             if (procStatRaw && sysStatRaw) {
                 const procParts = procStatRaw.trim().split(/\s+/);
@@ -260,7 +260,7 @@ export class StatusService {
     // 获取内网IP
     static async getInternalIP(): Promise<InternalIP[]> {
         try {
-            const result = await ShellService.exec(`ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`);
+            const result = await KSU.exec(`ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`);
             // 解析格式: "192.168.1.100 wlan0"
             return result.split('\n').filter(l => l.trim()).map(line => {
                 const parts = line.trim().split(/\s+/);
@@ -395,7 +395,7 @@ export class StatusService {
     // 获取当前出站模式
     static async getOutboundMode(): Promise<string> {
         try {
-            const output = await ShellService.exec(`grep '^OUTBOUND_MODE=' ${ShellService.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`);
+            const output = await KSU.exec(`grep '^OUTBOUND_MODE=' ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`);
             return output.trim() || 'rule';
         } catch (error) {
             return 'rule';
@@ -409,20 +409,20 @@ export class StatusService {
 
             if (mode === 'global') {
                 const rulesJson = await this.generateGlobalRules();
-                rulesFile = `${ShellService.MODULE_PATH}/logs/.mode_rules.json`;
+                rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
                 const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
-                await ShellService.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
+                await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
             } else if (mode === 'direct') {
                 const rulesJson = await this.generateDirectRules();
-                rulesFile = `${ShellService.MODULE_PATH}/logs/.mode_rules.json`;
+                rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
                 const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
-                await ShellService.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
+                await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
             }
 
-            const result = await ShellService.exec(`sh ${ShellService.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`);
+            const result = await KSU.exec(`sh ${KSU.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`);
 
             if (rulesFile) {
-                await ShellService.exec(`rm -f ${rulesFile}`).catch(() => { });
+                await KSU.exec(`rm -f ${rulesFile}`).catch(() => { });
             }
 
             return result.includes('success');
