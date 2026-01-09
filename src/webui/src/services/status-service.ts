@@ -280,12 +280,7 @@ export class StatusService {
 
     // 获取外网IP
     static async getExternalIP(): Promise<string | null> {
-        try {
-            const result = await ShellService.exec(`curl -s --connect-timeout 3 --max-time 5 ip.sb 2>/dev/null`);
-            return result.trim() || null;
-        } catch (error) {
-            return null;
-        }
+        return ShellService.fetchExternalIP();
     }
 
     // ==================== 出站模式 ====================

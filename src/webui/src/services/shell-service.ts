@@ -115,4 +115,77 @@ export class ShellService {
             }
         });
     }
+
+    /**
+     * 获取外网 IP (使用 spawn 真正非阻塞)
+     * 同时请求多个 API，返回第一个成功的结果
+     */
+    static fetchExternalIP(): Promise<string | null> {
+        const ipApis = [
+            { url: 'https://ipwho.is', field: 'ip' },
+            { url: 'https://api.myip.com', field: 'ip' },
+            { url: 'https://ipapi.co/json', field: 'ip' },
+            { url: 'http://ip-api.com/json', field: 'query' },
+            { url: 'https://api.ip.sb/geoip', field: 'ip' },
+        ];
+
+        // 为每个 API 创建一个 spawn-based Promise
+        const fetchPromises = ipApis.map((api) => {
+            return new Promise<string>((resolve, reject) => {
+                let output = '';
+                let resolved = false;
+
+                const timeout = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(new Error('timeout'));
+                    }
+                }, 5000);
+
+                try {
+                    const curl = spawn('curl', ['-s', '--connect-timeout', '3', '--max-time', '5', api.url]) as SpawnProcess;
+
+                    curl.stdout.on('data', (data: string) => {
+                        output += data;
+                    });
+
+                    curl.on('exit', (code: number) => {
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+
+                        if (code === 0 && output.trim()) {
+                            try {
+                                const json = JSON.parse(output.trim());
+                                const ip = json[api.field];
+                                if (ip && typeof ip === 'string' && /^[\d.:a-fA-F]+$/.test(ip)) {
+                                    resolve(ip);
+                                    return;
+                                }
+                            } catch {
+                                // JSON parse failed
+                            }
+                        }
+                        reject(new Error('failed'));
+                    });
+
+                    curl.on('error', () => {
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+                        reject(new Error('error'));
+                    });
+                } catch {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timeout);
+                        reject(new Error('spawn failed'));
+                    }
+                }
+            });
+        });
+
+        // Race: 返回第一个成功的结果
+        return Promise.any(fetchPromises).catch(() => null);
+    }
 }

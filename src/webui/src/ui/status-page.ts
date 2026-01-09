@@ -347,17 +347,8 @@ export class StatusPageManager {
             if (el) el.textContent = '--';
         }
 
-        // 外网 IP
-        try {
-            const externalIP = await StatusService.getExternalIP();
-            const el = document.getElementById('external-ip');
-            if (el) {
-                el.textContent = externalIP || '--';
-            }
-        } catch (e) {
-            const el = document.getElementById('external-ip');
-            if (el) el.textContent = '--';
-        }
+        // 外网 IP 
+        this.updateExternalIP();
 
         // 流量统计
         try {
@@ -397,6 +388,26 @@ export class StatusPageManager {
             return { value: (bytes / 1024).toFixed(0), unit: 'KB' };
         }
         return { value: bytes.toString(), unit: 'B' };
+    }
+
+    /**
+     * 更新外网 IP
+     * 使用 fire-and-forget 模式，不影响其他 UI 更新
+     */
+    updateExternalIP(): void {
+        const el = document.getElementById('external-ip');
+        if (!el) return;
+
+        // 显示加载状态
+        el.innerHTML = '<span class="loading-spinner"></span>';
+
+        StatusService.getExternalIP()
+            .then(ip => {
+                el.textContent = ip || '--';
+            })
+            .catch(() => {
+                el.textContent = '--';
+            });
     }
 
     updateDonutChart(upload: number, download: number): void {
