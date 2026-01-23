@@ -568,3 +568,19 @@ mdui-divider {
 mdui-snackbar[placement="bottom"] {
   bottom: 88px !important;
 }
+
+/* ==================== 当前节点标签文字颜色 ==================== */
+
+/* 浅色模式：半透明白色文字 */
+@media (prefers-color-scheme: light) {
+  .current-tag-text {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+}
+
+/* 深色模式：半透明黑色文字 */
+@media (prefers-color-scheme: dark) {
+  .current-tag-text {
+    color: rgba(0, 0, 0, 0.75) !important;
+  }
+}
