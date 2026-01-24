@@ -698,6 +698,7 @@ setup_proxy_chain() {
         $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$HOTSPOT_INTERFACE" -j ACCEPT
         log Info "热点接口 $HOTSPOT_INTERFACE 将被绕过"
     fi
+
     if [ "$PROXY_USB" -eq 1 ]; then
         $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j RETURN
         log Info "USB 接口 $USB_INTERFACE 将被代理"
@@ -706,6 +707,22 @@ setup_proxy_chain() {
         $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$USB_INTERFACE" -j ACCEPT
         log Info "USB 接口 $USB_INTERFACE 将被绕过"
     fi
+
+    if [ -n "$OTHER_PROXY_INTERFACES" ]; then
+        for interface in $OTHER_PROXY_INTERFACES; do
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$interface" -j RETURN
+        done
+        log Info "其他接口 $OTHER_PROXY_INTERFACES 将被代理"
+    fi
+
+    if [ -n "$OTHER_BYPASS_INTERFACES" ]; then
+        for interface in $OTHER_BYPASS_INTERFACES; do
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$interface" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$interface" -j ACCEPT
+        done
+        log Info "其他接口 $OTHER_BYPASS_INTERFACES 将被绕过"
+    fi
+
     $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -j ACCEPT
     log Info "接口代理规则配置完成"
 
