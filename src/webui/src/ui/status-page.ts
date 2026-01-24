@@ -18,6 +18,24 @@ interface TrafficStats {
 }
 
 /**
+ * 为十六进制颜色添加透明度
+ * @param hexColor - 十六进制颜色值（支持 #RRGGBB 或 #RRGGBBAA 格式）
+ * @param alpha - 两位十六进制透明度值
+ * @returns 带透明度的颜色值
+ */
+const addColorAlpha = (hexColor: string, alpha: string): string => {
+    const hex = hexColor.replace('#', '');
+    if (hex.length === 8) {
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        const a = parseInt(alpha, 16) / 255;
+        return `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
+    }
+    return '#' + hex + alpha;
+};
+
+/**
  * 状态页面管理器
  */
 export class StatusPageManager {
@@ -481,8 +499,8 @@ export class StatusPageManager {
                     fillTo: -1e9,
                     fill: (u: any, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
-                        gradient.addColorStop(0, secondaryColor + '60');
-                        gradient.addColorStop(1, secondaryColor + '1A');
+                        gradient.addColorStop(0, addColorAlpha(secondaryColor, '60'));
+                        gradient.addColorStop(1, addColorAlpha(secondaryColor, '1A'));
                         return gradient;
                     },
                 },
@@ -495,8 +513,8 @@ export class StatusPageManager {
                     fillTo: -1e9,
                     fill: (u: any, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
-                        gradient.addColorStop(0, primaryColor + '60');
-                        gradient.addColorStop(1, primaryColor + '1A');
+                        gradient.addColorStop(0, addColorAlpha(primaryColor, '60'));
+                        gradient.addColorStop(1, addColorAlpha(primaryColor, '1A'));
                         return gradient;
                     },
                 }
@@ -705,5 +723,17 @@ export class StatusPageManager {
                 latencyBtn.disabled = false;
             }
         }
+    }
+
+    /**
+     * 更新网速图表颜色
+     * 当主题色改变时调用此方法刷新图表颜色
+     */
+    updateSpeedChartColors(): void {
+        if (!this.speedChart) return;
+
+        this.speedChart.destroy();
+        this.speedChart = null;
+        this.initSpeedChart();
     }
 }

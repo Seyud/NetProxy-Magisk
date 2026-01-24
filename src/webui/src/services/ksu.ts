@@ -94,7 +94,77 @@ export class KSU {
      * @returns ChildProcess 实例
      */
     static spawn(command: string, args: string[] = [], options: ExecOptions = {}): ChildProcess {
-        return ksuSpawn(command, args, options) as ChildProcess;
+        // 自定义 spawn 实现，解决 WebViewInterface 在 exit 后发送 error 导致的 ReferenceError 问题
+        const id = Date.now() + '_' + Math.floor(Math.random() * 1000);
+        const callbackName = 'spawn_callback_' + id;
+
+        // 创建简单的事件发射器
+        const createEmitter = () => {
+            const listeners: Record<string, Function[]> = {};
+            return {
+                listeners,
+                on(event: string, cb: Function) {
+                    if (!listeners[event]) listeners[event] = [];
+                    listeners[event].push(cb);
+                },
+                emit(event: string, ...data: any[]) {
+                    if (listeners[event]) {
+                        listeners[event].forEach(cb => {
+                            try { cb(...data); } catch (e) { console.error(`Error in ${callbackName} ${event}`, e); }
+                        });
+                    }
+                }
+            };
+        };
+
+        const stdout = createEmitter();
+        const stderr = createEmitter();
+        const mainEmitter = createEmitter();
+
+        const child: any = {
+            stdout: {
+                on: (event: string, cb: any) => stdout.on(event, cb),
+                // 供 Native 调用
+                emit: stdout.emit
+            },
+            stderr: {
+                on: (event: string, cb: any) => stderr.on(event, cb),
+                // 供 Native 调用
+                emit: stderr.emit
+            },
+            on: (event: string, cb: any) => mainEmitter.on(event, cb),
+            // 供 Native 调用
+            emit: mainEmitter.emit
+        };
+
+        // 挂载到 window 供 Native 调用
+        (window as any)[callbackName] = child;
+
+        // 监听 exit 事件，延迟清理以防止 Native 在 exit 后继续发送 error
+        child.on('exit', () => {
+            setTimeout(() => {
+                delete (window as any)[callbackName];
+            }, 5000); // 保留 5 秒足够处理后续事件
+        });
+
+        // 尝试调用 Native 接口
+        try {
+            const ksu = (window as any).ksu;
+            if (ksu && ksu.spawn) {
+                ksu.spawn(command, JSON.stringify(args), JSON.stringify(options), callbackName);
+            } else {
+                console.warn('[KSU] Native spawn not found, falling back to kernelsu package if possible or failing');
+                // 如果 window.ksu.spawn 不存在，可能是在非 Manager 环境，此时 fallback 到原版 ksuSpawn?
+                // 但原版 ksuSpawn 也需要 window.ksu... 
+                // 这里我们假设这是在 Manager 环境中
+                setTimeout(() => child.emit('error', new Error('Native ksu.spawn interface missing')), 0);
+            }
+        } catch (e: any) {
+            console.error('[KSU] Spawn invocation failed', e);
+            setTimeout(() => child.emit('error', e), 0);
+        }
+
+        return child as ChildProcess;
     }
 
     // ==================== WebView 控制 ====================

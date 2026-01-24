@@ -1100,6 +1100,8 @@ export class SettingsPageManager {
         this.updateMonetToggleState();
         const modeName = mode === 'auto' ? I18nService.t('settings.theme.mode_auto') : mode === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
         toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
+
+        this.ui.statusPage.updateSpeedChartColors();
     }
 
     applyThemeColor(color) {
@@ -1123,6 +1125,8 @@ export class SettingsPageManager {
 
         this.updateMonetToggleState();
         toast(I18nService.t('settings.theme.toast_color_changed'));
+
+        this.ui.statusPage.updateSpeedChartColors();
     }
 
     /**
@@ -1338,6 +1342,8 @@ export class SettingsPageManager {
             // 设置所有 monet 变量，使用 MDUI 生成的值覆盖 monet.css 的默认值
             this.applyAllMonetVariables(savedColor, isDark);
         }
+
+        this.ui.statusPage.updateSpeedChartColors();
     }
 
     showAboutDialog() {
