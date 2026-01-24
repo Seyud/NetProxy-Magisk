@@ -576,9 +576,9 @@ setup_proxy_chain() {
     # 根据 IP 版本定义链
     local chains=""
     if [ "$family" = "6" ]; then
-        chains="PROXY_PREROUTING6 PROXY_OUTPUT6 BYPASS_IP6 BYPASS_INTERFACE6 PROXY_INTERFACE6 DNS_HIJACK_PRE6 DNS_HIJACK_OUT6 APP_CHAIN6 MAC_CHAIN6"
+        chains="PROXY_PREROUTING6 PROXY_OUTPUT6 PROXY_IP6 BYPASS_IP6 BYPASS_INTERFACE6 PROXY_INTERFACE6 DNS_HIJACK_PRE6 DNS_HIJACK_OUT6 APP_CHAIN6 MAC_CHAIN6"
     else
-        chains="PROXY_PREROUTING PROXY_OUTPUT BYPASS_IP BYPASS_INTERFACE PROXY_INTERFACE DNS_HIJACK_PRE DNS_HIJACK_OUT APP_CHAIN MAC_CHAIN"
+        chains="PROXY_PREROUTING PROXY_OUTPUT PROXY_IP BYPASS_IP BYPASS_INTERFACE PROXY_INTERFACE DNS_HIJACK_PRE DNS_HIJACK_OUT APP_CHAIN MAC_CHAIN"
     fi
 
     local table="mangle"
@@ -591,46 +591,51 @@ setup_proxy_chain() {
         safe_chain_create "$family" "$table" "$c"
     done
 
+    $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j "PROXY_IP$suffix"
     $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j "BYPASS_IP$suffix"
     $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j "PROXY_INTERFACE$suffix"
     $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j "MAC_CHAIN$suffix"
     $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j "DNS_HIJACK_PRE$suffix"
 
+    $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j "PROXY_IP$suffix"
     $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j "BYPASS_IP$suffix"
     $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j "BYPASS_INTERFACE$suffix"
     $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j "APP_CHAIN$suffix"
     $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j "DNS_HIJACK_OUT$suffix"
 
-    if check_kernel_feature "NETFILTER_XT_MATCH_ADDRTYPE"; then
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
-        log Info "已添加本地地址类型绕过"
-    fi
 
-    if check_kernel_feature "NETFILTER_XT_MATCH_CONNTRACK"; then
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m conntrack --ctdir REPLY -j ACCEPT
-        log Info "已添加回复连接方向绕过"
+
+    # 添加代理 IP 段
+    if [ "$family" = "6" ]; then
+        if [ -n "$PROXY_IPv6_LIST" ]; then
+            for subnet6 in $PROXY_IPv6_LIST; do
+                $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet6" -j RETURN
+            done
+        fi
+        log Info "已添加 IPv6 代理 IP 段规则"
+    else
+        if [ -n "$PROXY_IPv4_LIST" ]; then
+            for subnet4 in $PROXY_IPv4_LIST; do
+                $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet4" -j RETURN
+            done
+        fi
+        log Info "已添加 IPv4 代理 IP 段规则"
     fi
 
     # 添加私有 IP 段绕过
     if [ "$family" = "6" ]; then
-        for subnet6 in ::/128 ::1/128 ::ffff:0:0/96 \
-            100::/64 64:ff9b::/96 2001::/32 2001:10::/28 \
-            2001:20::/28 2001:db8::/32 \
-            2002::/16 fe80::/10 ff00::/8; do
+        for subnet6 in $BYPASS_IPv6_LIST; do
             $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" -p udp ! --dport 53 -j ACCEPT
             $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" ! -p udp -j ACCEPT
         done
+        log Info "已添加 IPv6 绕过 IP 段规则"
     else
-        for subnet4 in 0.0.0.0/8 10.0.0.0/8 100.0.0.0/8 127.0.0.0/8 \
-            169.254.0.0/16 172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 \
-            192.168.0.0/16 198.51.100.0/24 203.0.113.0/24 \
-            224.0.0.0/4 240.0.0.0/4 255.255.255.255/32; do
+        for subnet4 in $BYPASS_IPv4_LIST; do
             $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" -p udp ! --dport 53 -j ACCEPT
             $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" ! -p udp -j ACCEPT
         done
+        log Info "已添加 IPv4 绕过 IP 段规则"
     fi
-    log Info "已添加私有 IP 段绕过规则"
 
     if [ "$BYPASS_CN_IP" -eq 1 ]; then
         ipset_name="cnip"
@@ -644,6 +649,17 @@ setup_proxy_chain() {
         else
             log Warn "ipset '$ipset_name' 不可用，跳过中国 IP 绕过"
         fi
+    fi
+
+    if check_kernel_feature "NETFILTER_XT_MATCH_ADDRTYPE"; then
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
+        log Info "已添加本地地址类型绕过"
+    fi
+
+    if check_kernel_feature "NETFILTER_XT_MATCH_CONNTRACK"; then
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m conntrack --ctdir REPLY -j ACCEPT
+        log Info "已添加回复连接方向绕过"
     fi
 
     log Info "正在配置接口代理规则"
@@ -977,11 +993,13 @@ cleanup_chain() {
     fi
 
     # 从主链移除规则
+    $cmd -t "$table" -D "PROXY_PREROUTING$suffix" -j "PROXY_IP$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_PREROUTING$suffix" -j "BYPASS_IP$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_PREROUTING$suffix" -j "PROXY_INTERFACE$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_PREROUTING$suffix" -j "MAC_CHAIN$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_PREROUTING$suffix" -j "DNS_HIJACK_PRE$suffix" 2> /dev/null || true
 
+    $cmd -t "$table" -D "PROXY_OUTPUT$suffix" -j "PROXY_IP$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_OUTPUT$suffix" -j "BYPASS_IP$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_OUTPUT$suffix" -j "BYPASS_INTERFACE$suffix" 2> /dev/null || true
     $cmd -t "$table" -D "PROXY_OUTPUT$suffix" -j "APP_CHAIN$suffix" 2> /dev/null || true
@@ -999,9 +1017,9 @@ cleanup_chain() {
     # 定义链
     local chains=""
     if [ "$family" = "6" ]; then
-        chains="PROXY_PREROUTING6 PROXY_OUTPUT6 BYPASS_IP6 BYPASS_INTERFACE6 PROXY_INTERFACE6 DNS_HIJACK_PRE6 DNS_HIJACK_OUT6 APP_CHAIN6 MAC_CHAIN6"
+        chains="PROXY_PREROUTING6 PROXY_OUTPUT6 PROXY_IP6 BYPASS_IP6 BYPASS_INTERFACE6 PROXY_INTERFACE6 DNS_HIJACK_PRE6 DNS_HIJACK_OUT6 APP_CHAIN6 MAC_CHAIN6"
     else
-        chains="PROXY_PREROUTING PROXY_OUTPUT BYPASS_IP BYPASS_INTERFACE PROXY_INTERFACE DNS_HIJACK_PRE DNS_HIJACK_OUT APP_CHAIN MAC_CHAIN"
+        chains="PROXY_PREROUTING PROXY_OUTPUT PROXY_IP BYPASS_IP BYPASS_INTERFACE PROXY_INTERFACE DNS_HIJACK_PRE DNS_HIJACK_OUT APP_CHAIN MAC_CHAIN"
     fi
 
     # 清理链
